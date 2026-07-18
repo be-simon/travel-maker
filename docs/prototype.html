@@ -1,0 +1,1583 @@
+<title>Travel Maker 프로토타입</title>
+<style>
+  /* ===== Reset & base ===== */
+  * , *::before, *::after { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    overflow-x: hidden;
+  }
+  h1, h2, h3, h4, p, ul, ol, dl, dd, figure { margin: 0; }
+  ul, ol { padding: 0; list-style: none; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  a { color: inherit; }
+  table { border-collapse: collapse; width: 100%; }
+  img, svg { display: block; max-width: 100%; }
+
+  /* ===== Design tokens — light (default) ===== */
+  :root {
+    --bg: #F6F7F6;
+    --surface: #FFFFFF;
+    --ink: #22303A;
+    --ink-soft: #5C6B76;
+    --line: #E2E6E4;
+    --accent: #2B5D8A;
+    --accent-ink: #FFFFFF;
+    --blk-move: #E7E9EB;
+    --blk-tour: #DDEAD8;
+    --blk-sight: #F5EBCF;
+    --blk-drive: #EFD9D7;
+    --blk-lodge: #DDD8EA;
+    --blk-free: #D9E4EE;
+    --ok: #2E7D4F;
+    --warn: #B3541E;
+    --star: #C9962A;
+    --shadow: 0 1px 2px rgba(34,48,58,0.06), 0 4px 14px rgba(34,48,58,0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14191D;
+      --surface: #1D242A;
+      --ink: #E5EAED;
+      --ink-soft: #93A1AB;
+      --line: #2C353C;
+      --accent: #6FA3D3;
+      --accent-ink: #10161B;
+      --blk-move: #2A3136;
+      --blk-tour: #2E3D2B;
+      --blk-sight: #46402A;
+      --blk-drive: #43302F;
+      --blk-lodge: #3A3550;
+      --blk-free: #263845;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14191D;
+    --surface: #1D242A;
+    --ink: #E5EAED;
+    --ink-soft: #93A1AB;
+    --line: #2C353C;
+    --accent: #6FA3D3;
+    --accent-ink: #10161B;
+    --blk-move: #2A3136;
+    --blk-tour: #2E3D2B;
+    --blk-sight: #46402A;
+    --blk-drive: #43302F;
+    --blk-lodge: #3A3550;
+    --blk-free: #263845;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.35);
+  }
+  :root[data-theme="light"] {
+    --bg: #F6F7F6;
+    --surface: #FFFFFF;
+    --ink: #22303A;
+    --ink-soft: #5C6B76;
+    --line: #E2E6E4;
+    --accent: #2B5D8A;
+    --accent-ink: #FFFFFF;
+    --blk-move: #E7E9EB;
+    --blk-tour: #DDEAD8;
+    --blk-sight: #F5EBCF;
+    --blk-drive: #EFD9D7;
+    --blk-lodge: #DDD8EA;
+    --blk-free: #D9E4EE;
+    --shadow: 0 1px 2px rgba(34,48,58,0.06), 0 4px 14px rgba(34,48,58,0.06);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      transition: none !important;
+      animation: none !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* ===== Chrome / top nav ===== */
+  .chrome {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+  .chrome-inner {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .logo-wrap { display: flex; align-items: center; gap: 8px; margin-right: auto; }
+  .logo { font-size: 17px; font-weight: 700; color: var(--accent); letter-spacing: -0.01em; }
+  .badge-proto {
+    font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+    color: var(--ink-soft); border: 1px solid var(--line); border-radius: 20px;
+    padding: 2px 8px; text-transform: uppercase; background: var(--bg);
+  }
+  .tabs { display: flex; flex-wrap: wrap; gap: 2px; }
+  .top-tab {
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    padding: 8px 12px; font-size: 13px; font-weight: 600; color: var(--ink-soft);
+    border-radius: 6px 6px 0 0;
+  }
+  .top-tab:hover { color: var(--ink); background: var(--bg); }
+  .top-tab.is-active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ===== Screens ===== */
+  .screen { max-width: 1120px; margin: 0 auto; padding: 28px 20px 60px; }
+  .screen-head { margin-bottom: 20px; }
+  .screen-title { font-size: 20px; font-weight: 700; letter-spacing: -0.01em; text-wrap: balance; }
+  .screen-desc { margin-top: 6px; color: var(--ink-soft); font-size: 13.5px; }
+  .section-label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--ink-soft); margin-bottom: 10px; display: block;
+  }
+  .text-sm { font-size: 12.5px; }
+  .text-soft { color: var(--ink-soft); }
+
+  /* ===== Wireframe chip / notes ===== */
+  .wf-target { position: relative; margin-top: 14px; }
+  .chip-num {
+    position: absolute; top: -11px; left: -11px; width: 22px; height: 22px;
+    border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+    font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    box-shadow: var(--shadow); z-index: 6; font-variant-numeric: tabular-nums;
+  }
+  .wf-notes {
+    margin-top: 32px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px 20px;
+  }
+  .wf-notes-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--accent); }
+  .wf-notes-extra { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); color: var(--ink-soft); font-size: 12.5px; }
+  .wf-list { margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .wf-item { display: flex; gap: 10px; align-items: flex-start; }
+  .wf-item-num {
+    flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%; background: var(--accent);
+    color: var(--accent-ink); font-size: 10.5px; font-weight: 700; display: flex;
+    align-items: center; justify-content: center; margin-top: 1px;
+  }
+  .wf-item b { font-weight: 700; }
+  .wf-item span.d { color: var(--ink-soft); }
+
+  /* ===== Generic components ===== */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink); padding: 8px 14px; font-size: 13px; font-weight: 600;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .btn-primary:hover { opacity: 0.92; }
+  .btn-primary:disabled { opacity: 0.45; cursor: default; }
+  .btn-ghost { background: transparent; border-color: transparent; color: var(--accent); padding: 6px 8px; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .btn-dashed {
+    border: 1.5px dashed var(--line); background: transparent; color: var(--ink-soft);
+    border-radius: 12px; width: 100%; height: 100%; font-weight: 600;
+  }
+  .btn-dashed:hover { border-color: var(--accent); color: var(--accent); }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px; border-radius: 20px; border: 1px solid var(--line);
+    background: var(--surface); padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--ink-soft);
+  }
+  .chip.is-active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .city-chip { background: var(--bg); border-color: var(--line); color: var(--ink-soft); font-weight: 600; }
+
+  .avatar {
+    width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+    display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700;
+    border: 2px solid var(--surface); flex: 0 0 auto;
+  }
+  .avatar-group { display: flex; }
+  .avatar-group .avatar:not(:first-child) { margin-left: -8px; }
+
+  .status-badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+  .status-candidate { background: var(--bg); color: var(--ink-soft); border: 1px solid var(--line); }
+  .status-planned { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+  .status-visited { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+
+  .star-ico { color: var(--star); }
+
+  table.table { font-size: 13px; }
+  table.table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+  table.table td { padding: 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  table.table tr:last-child td { border-bottom: none; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+
+  /* ===== S0 overview ===== */
+  .lead { max-width: 68ch; color: var(--ink); font-size: 14.5px; }
+  .cards3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 16px; }
+  .flow-card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .flow-problem { font-size: 12.5px; color: var(--ink-soft); }
+  .flow-arrow { color: var(--accent); font-weight: 700; margin: 6px 0; font-size: 13px; }
+  .flow-solution { font-size: 14px; font-weight: 700; }
+  .cycle-table td { vertical-align: middle; }
+  .mermaid-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 16px; margin-top: 16px; }
+  .block-title { font-size: 15px; font-weight: 700; margin: 32px 0 4px; }
+
+  /* ===== S1 home ===== */
+  .app-topbar { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 16px; margin-bottom: 22px; }
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .trip-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px; text-align: left; width: 100%; box-shadow: var(--shadow);
+  }
+  .trip-card:hover { border-color: var(--accent); }
+  .trip-card.is-past { opacity: 0.55; }
+  .trip-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+  .trip-name { font-size: 15.5px; font-weight: 700; }
+  .badge-status { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; white-space: nowrap; }
+  .badge-planning { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+  .badge-done { background: var(--bg); color: var(--ink-soft); border: 1px solid var(--line); }
+  .trip-dates { color: var(--ink-soft); font-size: 12.5px; }
+  .trip-cities { display: flex; flex-wrap: wrap; gap: 6px; }
+  .trip-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+  .trip-progress { font-size: 12px; color: var(--ink-soft); }
+  .new-trip-card { border-radius: 14px; min-height: 168px; display: flex; align-items: center; justify-content: center; }
+  .invite-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .invite-copy { font-size: 13.5px; }
+  .invite-copy b { font-weight: 700; }
+  .invite-actions { display: flex; gap: 8px; }
+  .home-section { margin-top: 30px; }
+  .tiny-note { font-size: 12px; color: var(--accent); margin-top: 8px; }
+
+  /* ===== Workspace shared header (S2/S3/S4) ===== */
+  .ws-header {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px;
+    display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 18px; position: relative;
+  }
+  .ws-id { display: flex; flex-direction: column; gap: 2px; margin-right: 8px; }
+  .ws-title { font-size: 16px; font-weight: 700; }
+  .ws-dates { font-size: 12px; color: var(--ink-soft); }
+  .ws-members { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+  .ws-subtabs { display: flex; gap: 4px; flex-basis: 100%; border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; }
+  .sub-tab {
+    background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 7px 12px;
+    font-size: 12.5px; font-weight: 600; color: var(--ink-soft);
+  }
+  .sub-tab:hover { background: var(--bg); color: var(--ink); }
+  .sub-tab.is-active { background: var(--accent); color: var(--accent-ink); }
+  .invite-tip { font-size: 11.5px; color: var(--ok); font-weight: 600; }
+
+  /* ===== S2 board ===== */
+  .board-layout { display: grid; grid-template-columns: 168px 1fr; gap: 18px; align-items: start; }
+  .group-nav { display: flex; flex-direction: column; gap: 4px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
+  .group-nav-btn {
+    text-align: left; background: transparent; border: none; border-radius: 8px; padding: 9px 10px;
+    font-size: 13px; font-weight: 600; color: var(--ink-soft); display: flex; justify-content: space-between;
+  }
+  .group-nav-btn:hover { background: var(--bg); color: var(--ink); }
+  .group-nav-btn.is-active { background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
+  .group-nav-btn .cnt { font-variant-numeric: tabular-nums; color: inherit; opacity: 0.8; }
+
+  .search-bar { position: relative; margin-bottom: 14px; display: flex; gap: 8px; }
+  .search-fake {
+    flex: 1; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+    padding: 11px 14px; color: var(--ink-soft); font-size: 13.5px;
+  }
+  .search-fake:hover { border-color: var(--accent); }
+  .search-dropdown {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 96px; background: var(--surface);
+    border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 6px; z-index: 20;
+  }
+  .search-dropdown[hidden] { display: none; }
+  .search-result { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 10px; border-radius: 8px; }
+  .search-result:hover { background: var(--bg); }
+  .search-result-name { font-size: 13px; font-weight: 600; }
+  .search-result-addr { font-size: 11.5px; color: var(--ink-soft); }
+  .direct-input-panel {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 14px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px;
+  }
+  .direct-input-panel[hidden] { display: none; }
+  .direct-input-panel label { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--ink-soft); font-weight: 600; }
+  .direct-input-panel input { border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; background: var(--bg); font-size: 13px; }
+
+  .filter-chips { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+
+  .spot-list { display: flex; flex-direction: column; gap: 10px; }
+  .spot-card {
+    background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--line);
+    border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .spot-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .spot-name { font-size: 14px; font-weight: 700; }
+  .cat-chip { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+  .cat-tour { background: var(--blk-tour); }
+  .cat-food { background: var(--blk-drive); }
+  .cat-shop { background: var(--blk-free); }
+  .cat-lodge-chip { background: var(--blk-lodge); }
+  .spot-meta { font-size: 12px; color: var(--ink-soft); display: flex; gap: 10px; flex-wrap: wrap; }
+  .spot-memo { font-size: 12.5px; color: var(--ink); background: var(--bg); border-radius: 8px; padding: 6px 9px; }
+  .spot-cost { font-size: 12px; font-weight: 700; color: var(--accent); margin-left: auto; }
+  .group-placeholder { background: var(--surface); border: 1px dashed var(--line); border-radius: 12px; padding: 28px; text-align: center; color: var(--ink-soft); font-size: 13px; }
+  .lodging-section { margin-top: 22px; }
+  .lodging-card {
+    background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--blk-lodge);
+    border-radius: 10px; padding: 14px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  }
+  .lodging-name { font-weight: 700; font-size: 14px; }
+  .lodging-meta { font-size: 12px; color: var(--ink-soft); }
+
+  /* ===== S3 timeline ===== */
+  .tl-note { color: var(--ink-soft); font-size: 12.5px; margin-bottom: 14px; }
+  .tl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); position: relative; padding: 16px 0 0 16px; }
+  .tl-grid {
+    display: grid;
+    grid-template-columns: 60px repeat(6, minmax(148px, 1fr));
+    grid-template-rows: 26px 46px repeat(13, 34px);
+    min-width: 960px;
+  }
+  .tl-corner { grid-row: 1 / 3; grid-column: 1; background: var(--bg); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .tl-city { display: flex; align-items: center; padding: 0 10px; font-size: 11px; font-weight: 700; color: var(--accent-ink); border-bottom: 1px solid var(--line); }
+  .tl-city-florence { background: color-mix(in srgb, var(--accent) 68%, var(--surface)); }
+  .tl-city-tuscany { background: color-mix(in srgb, var(--accent) 52%, var(--surface)); }
+  .tl-date {
+    grid-row: 2; border-bottom: 1px solid var(--line); border-left: 1px solid var(--line); padding: 6px 10px;
+    display: flex; flex-direction: column; justify-content: center; background: var(--bg);
+  }
+  .tl-date .d { font-size: 12.5px; font-weight: 700; }
+  .tl-date .s { font-size: 11px; color: var(--ink-soft); }
+  .tl-hour {
+    grid-column: 1; border-right: 1px solid var(--line); border-top: 1px solid var(--line);
+    font-size: 10.5px; color: var(--ink-soft); padding: 2px 6px; text-align: right;
+  }
+  .tl-track { grid-row: 3 / 16; border-left: 1px solid var(--line);
+    background-image: repeating-linear-gradient(to bottom, transparent, transparent 33px, var(--line) 33px, var(--line) 34px);
+  }
+  .tl-block {
+    border-radius: 7px; border-left: 3px solid var(--accent); padding: 5px 8px; margin: 1px 3px;
+    font-size: 11.5px; font-weight: 600; color: var(--ink); overflow: hidden; position: relative; z-index: 2;
+    display: flex; flex-direction: column; gap: 2px; box-shadow: var(--shadow);
+  }
+  .tl-block .t { font-size: 10px; font-weight: 700; color: var(--ink-soft); }
+  .tl-block .star-ico { position: absolute; top: 4px; right: 6px; font-size: 12px; }
+  .tl-move { background: var(--blk-move); border-left-color: #8A9199; }
+  .tl-tour { background: var(--blk-tour); border-left-color: #5F9A57; }
+  .tl-sight { background: var(--blk-sight); border-left-color: #B79433; }
+  .tl-drive { background: var(--blk-drive); border-left-color: #C07A72; }
+  .tl-lodge { background: var(--blk-lodge); border-left-color: #8B7DBE; }
+  .tl-free { background: var(--blk-free); border-left-color: #6E93B8; }
+  .tl-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; }
+  .tl-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-soft); }
+  .tl-legend-swatch { width: 14px; height: 14px; border-radius: 4px; }
+
+  /* ===== S4 map ===== */
+  .map-filterbar { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-bottom: 14px; }
+  .filter-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .filter-group-label { font-size: 11.5px; color: var(--ink-soft); font-weight: 600; }
+  select.date-select { border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; background: var(--surface); font-size: 12.5px; }
+  .map-legend { display: flex; gap: 14px; align-items: center; margin-bottom: 12px; font-size: 12px; color: var(--ink-soft); }
+  .map-legend span.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: -1px; }
+  .map-layout { display: grid; grid-template-columns: 1fr 300px; gap: 16px; align-items: start; }
+  .map-canvas { position: relative; height: 480px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .map-mocklabel {
+    position: absolute; right: 10px; bottom: 8px; font-size: 10.5px; color: var(--ink-soft);
+    background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; z-index: 5;
+  }
+  .pin-btn { position: absolute; transform: translate(-50%, -100%); background: transparent; border: none; padding: 0; display: flex; flex-direction: column; align-items: center; z-index: 3; }
+  .pin-shape {
+    width: 22px; height: 22px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg);
+    display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow); border: 2px solid var(--surface);
+  }
+  .pin-shape .glyph { transform: rotate(45deg); font-size: 10px; color: #fff; }
+  .pin-confirmed .pin-shape { background: var(--accent); }
+  .pin-candidate .pin-shape { background: var(--ink-soft); }
+  .pin-btn.is-hidden { display: none; }
+  .pin-label {
+    margin-top: 3px; font-size: 10px; font-weight: 700; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; white-space: nowrap;
+  }
+  .pin-btn.is-selected .pin-shape { outline: 2px solid var(--star); outline-offset: 2px; }
+  .map-detail { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px; min-height: 200px; }
+  .map-detail-empty { color: var(--ink-soft); font-size: 13px; text-align: center; padding: 40px 10px; }
+  .map-detail-name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .map-detail-row { font-size: 12.5px; color: var(--ink-soft); margin-top: 4px; }
+  .map-detail-memo { font-size: 12.5px; background: var(--bg); border-radius: 8px; padding: 8px 10px; margin-top: 10px; }
+  .map-toast { font-size: 11.5px; color: var(--ok); font-weight: 700; margin-top: 8px; }
+
+  /* ===== S5 today ===== */
+  .today-layout { display: flex; gap: 32px; align-items: flex-start; flex-wrap: wrap; }
+  .today-side { flex: 1 1 260px; max-width: 340px; padding-top: 20px; }
+  .today-side h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+  .today-side ul { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .today-side li { font-size: 12.5px; color: var(--ink-soft); padding-left: 14px; position: relative; }
+  .today-side li::before { content: "–"; position: absolute; left: 0; color: var(--accent); }
+
+  .phone {
+    width: 390px; max-width: 100%; border-radius: 28px; border: 10px solid var(--ink);
+    background: var(--bg); box-shadow: var(--shadow); flex: 0 0 auto; overflow: hidden;
+  }
+  .phone-screen { display: flex; flex-direction: column; min-height: 640px; }
+  .phone-topbar { padding: 14px 16px 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); }
+  .phone-date { font-size: 13.5px; font-weight: 700; }
+  .phone-time { font-size: 12px; color: var(--ink-soft); }
+  .sync-dot { display: flex; align-items: center; gap: 4px; font-size: 10.5px; color: var(--ok); font-weight: 700; }
+  .sync-dot .pulse { color: var(--ok); }
+  .phone-body { padding: 14px 16px 8px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+
+  .now-stack { display: flex; flex-direction: column; gap: 8px; }
+  /* 현재 일정 + 다음 일정 카드 */
+  .cur-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+  }
+  .cur-card .lbl { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); font-weight: 700; }
+  .cur-card .main { font-size: 13.5px; font-weight: 700; margin-top: 3px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .badge-live {
+    font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+    background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok);
+  }
+  .prev-line { font-size: 11px; color: var(--ink-soft); margin-top: 5px; }
+  .next-card {
+    background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border: 1px solid var(--accent);
+    border-radius: 12px; padding: 12px 14px;
+  }
+  .next-card .lbl { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--accent); font-weight: 700; }
+  .next-card .main { font-size: 14px; font-weight: 700; margin-top: 3px; }
+  .empty-chip {
+    display: inline-block; margin-top: 8px; background: var(--accent); color: var(--accent-ink);
+    font-size: 13px; font-weight: 700; padding: 5px 12px; border-radius: 20px;
+  }
+
+  .reco-head { font-size: 13px; font-weight: 700; }
+  .reco-sub { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .reco-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .reco-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+    display: flex; align-items: center; gap: 10px; overflow: hidden; max-height: 90px;
+  }
+  .reco-card.is-added { max-height: 0; padding: 0 12px; border-width: 0; margin: 0; opacity: 0; }
+  .reco-main { flex: 1; min-width: 0; }
+  .reco-name { font-size: 13px; font-weight: 700; }
+  .reco-dist { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .reco-status { display: inline-block; margin-top: 4px; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 6px; }
+  .reco-ok { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+  .reco-warn { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn); }
+  .reco-add-btn { flex: 0 0 auto; background: var(--accent); color: var(--accent-ink); border: none; border-radius: 8px; padding: 7px 10px; font-size: 11px; font-weight: 700; }
+  .reco-add-btn:disabled { opacity: 0.4; }
+
+  .share-feedback { font-size: 11.5px; color: var(--ok); font-weight: 700; height: 14px; }
+  .share-feedback[hidden] { display: none; }
+
+  .next-phase { border-top: 1px dashed var(--line); padding-top: 12px; margin-top: 2px; }
+  .np-head { display: flex; align-items: center; gap: 8px; }
+  .np-title { font-size: 13px; font-weight: 700; }
+  .badge-np {
+    font-size: 9.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--ink-soft); border: 1px solid var(--line); border-radius: 20px; padding: 2px 8px; background: var(--bg);
+  }
+  .np-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .np-card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px;
+    opacity: 0.5; cursor: default;
+  }
+  .np-card .reco-name { font-size: 13px; font-weight: 700; }
+  .np-card .reco-dist { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+  .np-caption { font-size: 10.5px; color: var(--ink-soft); margin-top: 8px; }
+
+  .mini-tl-head { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); font-weight: 700; margin-top: 4px; }
+  .mini-tl { display: flex; flex-direction: column; margin-top: 8px; }
+  .tl-item { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-left: 2px solid var(--line); padding-left: 12px; position: relative; }
+  .tl-item::before {
+    content: ""; position: absolute; left: -5px; top: 50%; transform: translateY(-50%);
+    width: 8px; height: 8px; border-radius: 50%; background: var(--ink-soft); border: 2px solid var(--surface);
+  }
+  .tl-item[data-dot="tour"]::before { background: #5F9A57; }
+  .tl-item[data-dot="sight"]::before { background: #B79433; }
+  .tl-item[data-dot="lodge"]::before { background: #8B7DBE; }
+  .tl-item[data-dot="free"]::before { background: #6E93B8; }
+  .tl-item .tl-time { font-size: 11px; font-weight: 700; width: 40px; flex: 0 0 auto; color: var(--ink-soft); }
+  .tl-item span:last-child { font-size: 12.5px; }
+  .tl-item.tl-empty { color: var(--ink-soft); font-style: italic; }
+  .tl-item.tl-empty span:last-child { font-size: 11.5px; }
+
+  .tabbar-mock { margin-top: auto; display: flex; border-top: 1px solid var(--line); background: var(--surface); }
+  .tabbar-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px 12px; background: transparent; border: none; color: var(--ink-soft); font-size: 10px; font-weight: 700; }
+  .tabbar-btn.is-active { color: var(--accent); }
+  .tabbar-btn svg { width: 18px; height: 18px; }
+
+  /* ===== Footer ===== */
+  .site-footer { text-align: center; padding: 26px 20px 40px; color: var(--ink-soft); font-size: 11.5px; border-top: 1px solid var(--line); margin-top: 10px; }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 760px) {
+    .board-layout { grid-template-columns: 1fr; }
+    .group-nav { flex-direction: row; overflow-x: auto; }
+    .map-layout { grid-template-columns: 1fr; }
+    .ws-members { margin-left: 0; }
+  }
+</style>
+
+<div class="chrome">
+  <div class="chrome-inner">
+    <div class="logo-wrap">
+      <span class="logo">Travel Maker</span>
+      <span class="badge-proto">Prototype v0.1</span>
+    </div>
+    <nav class="tabs" aria-label="주요 화면">
+      <button type="button" class="top-tab tab-btn" data-target="screen-overview">개요·와이어프레임</button>
+      <button type="button" class="top-tab tab-btn" data-target="screen-home">홈</button>
+      <button type="button" class="top-tab tab-btn" data-target="screen-board">후보 보드</button>
+      <button type="button" class="top-tab tab-btn" data-target="screen-timeline">타임라인</button>
+      <button type="button" class="top-tab tab-btn" data-target="screen-map">지도</button>
+      <button type="button" class="top-tab tab-btn" data-target="screen-today">Today(여행 중)</button>
+    </nav>
+  </div>
+</div>
+
+<!-- ===================== S0. 개요 · 와이어프레임 ===================== -->
+<section class="screen" id="screen-overview">
+  <div class="screen-head">
+    <h1 class="screen-title">개요 · 와이어프레임</h1>
+    <p class="screen-desc">Travel Maker 프로토타입 전체를 한눈에 보는 시작 화면입니다.</p>
+  </div>
+
+  <p class="lead">스프레드시트로 하던 여행 계획(일정 그리드 + 후보 목록)을 하나의 협업 도구로. 이 프로토타입은 PRD v0.1의 P0 범위를 화면으로 옮긴 것입니다.</p>
+
+  <div class="cards3">
+    <div class="flow-card">
+      <div class="flow-problem">문제 — 지도와 일정이 분리되어 있어 동선 확인을 위해 스프레드시트와 지도 앱을 오간다</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-solution">해결 — 지도 뷰 연동</div>
+    </div>
+    <div class="flow-card">
+      <div class="flow-problem">문제 — 여행 중 모바일 환경에서 일정 편집이 불편하다</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-solution">해결 — Today 모드</div>
+    </div>
+    <div class="flow-card">
+      <div class="flow-problem">문제 — 영업시간 등 스팟 정보를 매번 손으로 검색해 입력한다</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-solution">해결 — Places 자동 채움</div>
+    </div>
+  </div>
+
+  <h2 class="block-title">사용 사이클</h2>
+  <div class="table-wrap">
+    <table class="table cycle-table">
+      <thead>
+        <tr><th>단계</th><th>내용</th><th>연결 화면</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="num">1. 계획 전 (수집)</td>
+          <td>동행자들이 가고 싶은 곳을 자유롭게 모은다</td>
+          <td><button type="button" class="btn btn-sm tab-btn" data-target="screen-board">후보 보드로 이동 →</button></td>
+        </tr>
+        <tr>
+          <td class="num">2. 계획 (배치)</td>
+          <td>후보를 시간대에 배치하고 지도로 동선을 확인한다</td>
+          <td>
+            <button type="button" class="btn btn-sm tab-btn" data-target="screen-timeline">타임라인으로 이동 →</button>
+            <button type="button" class="btn btn-sm tab-btn" data-target="screen-map">지도로 이동 →</button>
+          </td>
+        </tr>
+        <tr>
+          <td class="num">3. 여행 중 (적응)</td>
+          <td>현재 일정 기준으로 빈 시간에 갈 곳을 추천받아 바로 편입한다</td>
+          <td><button type="button" class="btn btn-sm tab-btn" data-target="screen-today">Today로 이동 →</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="block-title">정보 구조 (IA)</h2>
+  <div class="mermaid-wrap">
+    <pre class="mermaid">
+flowchart TD
+  A["로그인 (Google OAuth)"] --> B["홈 (내 여행 목록)"]
+  B --> C["여행 워크스페이스"]
+  C --> D["후보 보드"]
+  C --> E["타임라인 플래너"]
+  C --> F["지도 뷰"]
+  C --> G["Today (여행 중 모드)"]
+  C --> H["멤버 초대"]
+    </pre>
+  </div>
+
+  <h2 class="block-title">화면 목록</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>화면명</th><th>주 사용 시점</th><th>주 기기</th><th>핵심 액션</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>홈</td><td>계획 전 / 상시</td><td>데스크톱 · 모바일</td><td>여행 진입, 새 여행 생성, 초대 수락</td></tr>
+        <tr><td>후보 보드</td><td>계획 전 (수집)</td><td>데스크톱 · 모바일</td><td>스팟 검색·추가, 상태·우선순위 관리</td></tr>
+        <tr><td>타임라인 플래너</td><td>계획 (배치)</td><td>데스크톱</td><td>후보를 시간대에 드래그 배치</td></tr>
+        <tr><td>지도 뷰</td><td>계획 (배치)</td><td>데스크톱 · 모바일</td><td>동선 확인, 마커에서 바로 일정 추가</td></tr>
+        <tr><td>Today</td><td>여행 중 (적응)</td><td>모바일</td><td>빈 시간 추천 확인, 원탭 일정 편입</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ===================== S1. 홈 ===================== -->
+<section class="screen" id="screen-home" hidden="">
+  <div class="screen-head">
+    <h1 class="screen-title">홈 — 내 여행 목록</h1>
+    <p class="screen-desc">로그인 후 처음 만나는 화면. 진행 중인 여행과 지난 여행, 받은 초대를 한눈에 확인합니다.</p>
+  </div>
+
+  <div class="app-topbar">
+    <span class="logo" style="font-size:15px;">Travel Maker</span>
+    <div class="avatar" title="Simon">S</div>
+  </div>
+
+  <div class="home-section">
+    <span class="section-label">내 여행</span>
+    <div class="cards-grid">
+      <div class="wf-target">
+        <span class="chip-num" aria-hidden="true">①</span>
+        <button type="button" class="trip-card tab-btn" data-target="screen-board" aria-label="이탈리아 여행 워크스페이스로 이동">
+          <div class="trip-card-head">
+            <span class="trip-name">이탈리아 여행</span>
+            <span class="badge-status badge-planning">계획 중</span>
+          </div>
+          <div class="trip-dates num">5/11 (월) – 5/23 (토)</div>
+          <div class="trip-cities">
+            <span class="chip city-chip">밀라노</span>
+            <span class="chip city-chip">피렌체</span>
+            <span class="chip city-chip">토스카나</span>
+            <span class="chip city-chip">로마</span>
+          </div>
+          <div class="trip-foot">
+            <div class="avatar-group">
+              <div class="avatar" title="Simon (Owner)">S</div>
+              <div class="avatar" title="하잉 (Editor)">하</div>
+            </div>
+            <span class="trip-progress num">후보 32 · 확정 18</span>
+          </div>
+        </button>
+      </div>
+
+      <div class="trip-card is-past">
+        <div class="trip-card-head">
+          <span class="trip-name">제주 가족여행</span>
+          <span class="badge-status badge-done">완료</span>
+        </div>
+        <div class="trip-dates num">지난 여행</div>
+        <div class="trip-cities"><span class="chip city-chip">제주시</span><span class="chip city-chip">서귀포</span></div>
+      </div>
+
+      <div class="wf-target">
+        <span class="chip-num" aria-hidden="true">②</span>
+        <button type="button" class="new-trip-card btn-dashed" id="new-trip-btn">+ 새 여행 만들기</button>
+        <div class="tiny-note" id="new-trip-note" hidden="">프로토타입에서는 비활성화된 액션입니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="home-section wf-target">
+    <span class="chip-num" aria-hidden="true">③</span>
+    <span class="section-label">받은 초대</span>
+    <div class="invite-card" id="invite-card">
+      <div class="invite-copy" id="invite-copy">오사카 벚꽃 여행 — <b>kim***@gmail.com</b>의 초대</div>
+      <div class="invite-actions" id="invite-actions">
+        <button type="button" class="btn btn-primary btn-sm" data-invite="accept">수락</button>
+        <button type="button" class="btn btn-sm" data-invite="reject">거절</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wf-notes">
+    <span class="wf-notes-title">와이어프레임 노트</span>
+    <div class="wf-list">
+      <div class="wf-item"><span class="wf-item-num">①</span><span><b>여행 카드</b> — <span class="d">워크스페이스 진입점. 카드를 누르면 해당 여행의 후보 보드로 바로 이동합니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">②</span><span><b>새 여행 생성</b> — <span class="d">이름·기간·대표 도시를 입력해 새 워크스페이스를 만드는 진입점입니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">③</span><span><b>초대 수락 플로우</b> — <span class="d">초대받은 이메일과 로그인 계정 이메일이 일치할 때만 합류할 수 있고, 그 전까지는 pending 상태로 유지됩니다.</span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== S2. 후보 보드 ===================== -->
+<section class="screen" id="screen-board" hidden="">
+  <div class="screen-head">
+    <h1 class="screen-title">후보 보드</h1>
+    <p class="screen-desc">도시별로 가고 싶은 곳을 모으고, 상태(후보 → 배치됨 → 방문)로 관리합니다.</p>
+  </div>
+
+  <div class="ws-header">
+    <div class="ws-id">
+      <span class="ws-title">이탈리아 여행</span>
+      <span class="ws-dates num">5/11 (월) – 5/23 (토)</span>
+    </div>
+    <div class="ws-members">
+      <div class="avatar-group">
+        <div class="avatar" title="Simon (Owner)">S</div>
+        <div class="avatar" title="하잉 (Editor)">하</div>
+      </div>
+      <button type="button" class="btn btn-sm invite-btn">+ 멤버 초대</button>
+      <span class="invite-tip" hidden="">초대 링크가 복사되었습니다 ✓</span>
+    </div>
+    <div class="ws-subtabs">
+      <button type="button" class="sub-tab tab-btn" data-target="screen-board">후보 보드</button>
+      <button type="button" class="sub-tab tab-btn" data-target="screen-timeline">타임라인</button>
+      <button type="button" class="sub-tab tab-btn" data-target="screen-map">지도</button>
+      <button type="button" class="sub-tab tab-btn" data-target="screen-today">Today</button>
+    </div>
+  </div>
+
+  <div class="wf-target">
+    <span class="chip-num" aria-hidden="true">①</span>
+    <div class="search-bar">
+      <button type="button" class="search-fake" id="search-toggle" aria-expanded="false" aria-controls="search-dropdown">🔍 Google Places에서 장소 검색해 추가…</button>
+      <button type="button" class="btn" id="direct-input-toggle">직접 입력</button>
+      <div class="search-dropdown" id="search-dropdown" hidden="">
+        <div class="search-result">
+          <div><div class="search-result-name">산타 크로체 성당</div><div class="search-result-addr">Piazza di Santa Croce, Firenze</div></div>
+          <button type="button" class="btn btn-sm">+ 추가</button>
+        </div>
+        <div class="search-result">
+          <div><div class="search-result-name">보볼리 정원</div><div class="search-result-addr">Piazza de' Pitti 1, Firenze</div></div>
+          <button type="button" class="btn btn-sm">+ 추가</button>
+        </div>
+        <div class="search-result">
+          <div><div class="search-result-name">메르카토 첸트랄레</div><div class="search-result-addr">Piazza del Mercato Centrale, Firenze</div></div>
+          <button type="button" class="btn btn-sm">+ 추가</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="direct-input-panel" id="direct-input-panel" hidden="">
+    <label>이름<input type="text" placeholder="예: 산타 크로체 성당" /></label>
+    <label>도시 그룹<input type="text" placeholder="예: 피렌체" /></label>
+    <label>카테고리<input type="text" placeholder="예: 관광" /></label>
+    <label>메모<input type="text" placeholder="자유 메모" /></label>
+  </div>
+
+  <div class="board-layout">
+    <div class="wf-target">
+      <span class="chip-num" aria-hidden="true">②</span>
+      <nav class="group-nav" aria-label="도시 그룹">
+        <button type="button" class="group-nav-btn" data-group="milan">밀라노 <span class="cnt num">7</span></button>
+        <button type="button" class="group-nav-btn is-active" data-group="florence">피렌체 <span class="cnt num">12</span></button>
+        <button type="button" class="group-nav-btn" data-group="tuscany">토스카나 <span class="cnt num">8</span></button>
+        <button type="button" class="group-nav-btn" data-group="roma">로마 <span class="cnt num">5</span></button>
+      </nav>
+    </div>
+
+    <div>
+      <div class="filter-chips" role="group" aria-label="상태 필터">
+        <button type="button" class="chip status-chip is-active" data-status="all">전체</button>
+        <button type="button" class="chip status-chip" data-status="candidate">후보만</button>
+        <button type="button" class="chip status-chip" data-status="planned">배치됨</button>
+      </div>
+
+      <div class="spot-group-panel" data-group="florence">
+        <div class="spot-list">
+          <div class="wf-target">
+            <span class="chip-num" aria-hidden="true">③</span>
+            <div class="spot-card" data-status="planned">
+              <div class="spot-head">
+                <span class="spot-name">산타마리아 노벨라 성당</span>
+                <span class="star-ico" title="우선순위">★</span>
+                <span class="cat-chip cat-tour">관광</span>
+                <span class="status-badge status-planned">배치됨</span>
+              </div>
+              <div class="spot-meta"><span>9:30–17:30</span><span>입장권 $7.5</span></div>
+              <div class="spot-memo">하잉이 꼭 가고 싶은 곳</div>
+            </div>
+          </div>
+
+          <div class="spot-card" data-status="planned">
+            <div class="spot-head">
+              <span class="spot-name">두오모 (산타마리아 델 피오레)</span>
+              <span class="cat-chip cat-tour">관광</span>
+              <span class="status-badge status-planned">배치됨</span>
+            </div>
+            <div class="spot-meta"><span>10:15–15:45</span><span>성당 무료 / 쿠폴라 유료</span></div>
+          </div>
+
+          <div class="spot-card" data-status="candidate">
+            <div class="spot-head">
+              <span class="spot-name">우피치 미술관</span>
+              <span class="cat-chip cat-tour">관광</span>
+              <span class="status-badge status-candidate">후보</span>
+            </div>
+            <div class="spot-meta"><span>8:15–18:30</span><span>$25</span></div>
+            <div class="spot-memo">예약 필요할 듯</div>
+          </div>
+
+          <div class="wf-target">
+            <span class="chip-num" aria-hidden="true">④</span>
+            <div class="spot-card" data-status="planned">
+              <div class="spot-head">
+                <span class="spot-name">미켈란젤로 광장</span>
+                <span class="star-ico" title="우선순위">★</span>
+                <span class="cat-chip cat-tour">관광</span>
+                <span class="status-badge status-planned">배치됨</span>
+              </div>
+              <div class="spot-meta"><span>상시</span><span>무료</span></div>
+              <div class="spot-memo">야경 명소, 베키오 다리에서 도보 15분</div>
+            </div>
+          </div>
+
+          <div class="spot-card" data-status="candidate">
+            <div class="spot-head">
+              <span class="spot-name">포르첼리노 시장</span>
+              <span class="cat-chip cat-shop">쇼핑</span>
+              <span class="status-badge status-candidate">후보</span>
+            </div>
+            <div class="spot-meta"><span>메르카토 첸트랄레 주변</span></div>
+          </div>
+
+          <div class="spot-card" data-status="planned">
+            <div class="spot-head">
+              <span class="spot-name">베키오 다리</span>
+              <span class="cat-chip cat-tour">관광</span>
+              <span class="status-badge status-planned">배치됨</span>
+            </div>
+            <div class="spot-meta"><span>상시</span><span>시뇨리아 광장 도보 3분</span></div>
+          </div>
+
+          <div class="spot-card" data-status="candidate">
+            <div class="spot-head">
+              <span class="spot-name">산타 크로체 성당</span>
+              <span class="cat-chip cat-tour">관광</span>
+              <span class="status-badge status-candidate">후보</span>
+            </div>
+            <div class="spot-meta"><span>9:30–17:30</span><span>$10</span></div>
+          </div>
+
+          <div class="spot-card" data-status="planned">
+            <div class="spot-head">
+              <span class="spot-name">Trattoria Zà Zà</span>
+              <span class="cat-chip cat-food">식당</span>
+              <span class="status-badge status-planned">배치됨</span>
+            </div>
+            <div class="spot-meta"><span>11:00–23:00</span></div>
+            <div class="spot-memo">티본 스테이크</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="spot-group-panel" data-group="milan" hidden="">
+        <div class="group-placeholder">이 프로토타입은 피렌체 그룹만 상세 데이터를 담고 있습니다. 밀라노도 동일한 카드 UI로 표시됩니다.</div>
+      </div>
+      <div class="spot-group-panel" data-group="tuscany" hidden="">
+        <div class="group-placeholder">이 프로토타입은 피렌체 그룹만 상세 데이터를 담고 있습니다. 토스카나도 동일한 카드 UI로 표시됩니다.</div>
+      </div>
+      <div class="spot-group-panel" data-group="roma" hidden="">
+        <div class="group-placeholder">이 프로토타입은 피렌체 그룹만 상세 데이터를 담고 있습니다. 로마도 동일한 카드 UI로 표시됩니다.</div>
+      </div>
+
+      <div class="lodging-section wf-target">
+        <span class="chip-num" aria-hidden="true">⑤</span>
+        <span class="section-label">숙소</span>
+        <div class="lodging-card">
+          <span class="cat-chip cat-lodge-chip">숙소</span>
+          <div style="flex:1;min-width:180px;">
+            <div class="lodging-name">Room Mate Luca</div>
+            <div class="lodging-meta">Via Luigi Alamanni 37 · <span class="num">5/13 체크인 · 5/15 체크아웃</span></div>
+          </div>
+          <a href="#" class="btn btn-sm" onclick="return false;">trip.com 예약</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wf-notes">
+    <span class="wf-notes-title">와이어프레임 노트</span>
+    <div class="wf-list">
+      <div class="wf-item"><span class="wf-item-num">①</span><span><b>Places 검색 자동 채움</b> — <span class="d">이름·주소·좌표·영업시간을 Google Places에서 가져와 수기 입력을 없앱니다. Places에 없는 곳은 직접 입력으로 보완합니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">②</span><span><b>도시 그룹</b> — <span class="d">후보를 도시/지역 단위로 나눠 관리해 방대한 목록도 탐색하기 쉽게 합니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">③</span><span><b>상태 배지</b> — <span class="d">후보 → 배치됨 → 방문 완료로 이어지는 스팟 라이프사이클을 한눈에 보여줍니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">④</span><span><b>우선순위 ★</b> — <span class="d">꼭 가야 할 곳을 표시해 두면 타임라인 배치와 Today 추천에서 우선 노출됩니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">⑤</span><span><b>숙소는 별도 타입</b> — <span class="d">체크인/아웃 날짜와 예약 링크를 갖는 별도 카드로, 일반 스팟과 구분해 관리합니다.</span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== S3. 타임라인 플래너 ===================== -->
+<section class="screen" id="screen-timeline" hidden="">
+  <div class="screen-head">
+    <h1 class="screen-title">타임라인 플래너</h1>
+    <p class="screen-desc">날짜 × 시간대 그리드에 후보를 배치해 일정을 확정합니다.</p>
+  </div>
+
+  <div class="ws-header">
+    <div class="ws-id">
+      <span class="ws-title">이탈리아 여행</span>
+      <span class="ws-dates num">5/11 (월) – 5/23 (토)</span>
+    </div>
+    <div class="ws-members">
+      <div class="avatar-group">
+        <div class="avatar" title="Simon (Owner)">S</div>
+        <div class="avatar" title="하잉 (Editor)">하</div>
+      </div>
+      <button type="button" class="btn btn-sm invite-btn">+ 멤버 초대</button>
+      <span class="invite-tip" hidden="">초대 링크가 복사되었습니다 ✓</span>
+    </div>
+    <div class="ws-subtabs">
+      <button type="button" class="sub-tab tab-btn" data-target="screen-board">후보 보드</button>
+      <button type="button" class="sub-tab tab-btn" data-target="screen-timeline">타임라인</button>
+      <button type="button" class="sub-tab tab-btn" data-target="screen-map">지도</button>
+      <button type="button" class="sub-tab tab-btn" data-target="screen-today">Today</button>
+    </div>
+  </div>
+
+  <p class="tl-note">후보 보드의 스팟을 드래그해 배치합니다 (프로토타입에서는 배치 결과만 표시).</p>
+
+  <div class="wf-target">
+    <span class="chip-num" aria-hidden="true">④</span>
+    <div class="tl-wrap">
+      <div class="tl-grid">
+        <div class="tl-corner"></div>
+        <div class="wf-target" style="grid-row:1;grid-column:2/4;margin:0;">
+          <span class="chip-num" aria-hidden="true">①</span>
+          <div class="tl-city tl-city-florence">피렌체 (2박)</div>
+        </div>
+        <div class="tl-city tl-city-tuscany" style="grid-row:1;grid-column:4/8;">토스카나 (5박)</div>
+
+        <div class="tl-date" style="grid-column:2;"><span class="d">5/13 (수)</span><span class="s">밀라노→피렌체</span></div>
+        <div class="tl-date" style="grid-column:3;"><span class="d">5/14 (목)</span><span class="s">피렌체</span></div>
+        <div class="tl-date" style="grid-column:4;"><span class="d">5/15 (금)</span><span class="s">GO 토스카나</span></div>
+        <div class="tl-date" style="grid-column:5;"><span class="d">5/16 (토)</span><span class="s">시에나</span></div>
+        <div class="tl-date" style="grid-column:6;"><span class="d">5/17 (일)</span><span class="s">토스카나</span></div>
+        <div class="tl-date" style="grid-column:7;"><span class="d">5/18 (월)</span><span class="s">피엔차</span></div>
+
+        <div class="tl-hour num" style="grid-row:3;">09:00</div>
+        <div class="tl-hour num" style="grid-row:4;">10:00</div>
+        <div class="tl-hour num" style="grid-row:5;">11:00</div>
+        <div class="tl-hour num" style="grid-row:6;">12:00</div>
+        <div class="tl-hour num" style="grid-row:7;">13:00</div>
+        <div class="tl-hour num" style="grid-row:8;">14:00</div>
+        <div class="tl-hour num" style="grid-row:9;">15:00</div>
+        <div class="tl-hour num" style="grid-row:10;">16:00</div>
+        <div class="tl-hour num" style="grid-row:11;">17:00</div>
+        <div class="tl-hour num" style="grid-row:12;">18:00</div>
+        <div class="tl-hour num" style="grid-row:13;">19:00</div>
+        <div class="tl-hour num" style="grid-row:14;">20:00</div>
+        <div class="tl-hour num" style="grid-row:15;">21:00</div>
+
+        <div class="tl-track" style="grid-column:2;"></div>
+        <div class="tl-track" style="grid-column:3;"></div>
+        <div class="tl-track" style="grid-column:4;"></div>
+        <div class="tl-track" style="grid-column:5;"></div>
+        <div class="tl-track" style="grid-column:6;"></div>
+        <div class="tl-track" style="grid-column:7;"></div>
+
+        <!-- 5/13 -->
+        <div class="wf-target" style="grid-column:2;grid-row:4/5;margin:0;">
+          <span class="chip-num" aria-hidden="true">②</span>
+          <div class="tl-block tl-move" style="height:100%;"><span class="t">10:00–11:00</span><span>체크아웃</span></div>
+        </div>
+        <div class="tl-block tl-move" style="grid-column:2;grid-row:5/7;"><span class="t">11:00–13:00</span><span>밀라노→피렌체 기차</span></div>
+        <div class="tl-block tl-move" style="grid-column:2;grid-row:7/8;"><span class="t">13:00–14:00</span><span>피렌체 도착·체크인</span></div>
+        <div class="tl-block tl-tour" style="grid-column:2;grid-row:8/12;"><span class="t">14:00–18:00</span><span>피렌체 투어</span></div>
+        <div class="tl-block tl-sight" style="grid-column:2;grid-row:13/15;"><span class="t">19:00–21:00</span><span>Trattoria Zà Zà 저녁</span></div>
+
+        <!-- 5/14 -->
+        <div class="tl-block tl-tour" style="grid-column:3;grid-row:4/11;"><span class="t">10:00–17:00</span><span>피렌체 투어 — 두오모·우피치</span></div>
+        <div class="tl-block tl-sight" style="grid-column:3;grid-row:11/13;"><span class="t">17:00–19:00</span><span>미켈란젤로 광장 ★ 야경</span></div>
+        <div class="tl-block tl-lodge" style="grid-column:3;grid-row:14/16;"><span class="t">20:00–22:00</span><span>숙소 휴식</span></div>
+
+        <!-- 5/15 -->
+        <div class="tl-block tl-move" style="grid-column:4;grid-row:4/6;"><span class="t">10:00–12:00</span><span>렌터카 픽업</span></div>
+        <div class="tl-block tl-sight" style="grid-column:4;grid-row:6/8;"><span class="t">12:00–14:00</span><span>피사 or 아울렛</span></div>
+        <div class="tl-block tl-drive" style="grid-column:4;grid-row:9/12;"><span class="t">15:00–18:00</span><span>토스카나 이동·체크인</span></div>
+        <div class="tl-block tl-lodge" style="grid-column:4;grid-row:13/16;"><span class="t">19:00–22:00</span><span>숙소</span></div>
+
+        <!-- 5/16 -->
+        <div class="tl-block tl-free" style="grid-column:5;grid-row:4/5;"><span class="t">10:00–11:00</span><span>조식 후 뒹굴</span></div>
+        <div class="tl-block tl-sight" style="grid-column:5;grid-row:5/8;"><span class="t">11:00–14:00</span><span>시에나</span><span class="star-ico" aria-hidden="true">★</span></div>
+        <div class="tl-block tl-free" style="grid-column:5;grid-row:8/10;"><span class="t">14:00–16:00</span><span>자유시간</span></div>
+        <div class="tl-block tl-lodge" style="grid-column:5;grid-row:11/16;"><span class="t">17:00–22:00</span><span>숙소</span></div>
+
+        <!-- 5/17 -->
+        <div class="tl-block tl-drive" style="grid-column:6;grid-row:4/7;"><span class="t">10:00–13:00</span><span>숙소 근처 드라이브</span></div>
+        <div class="tl-block tl-lodge" style="grid-column:6;grid-row:8/16;"><span class="t">14:00–22:00</span><span>숙소·휴식</span></div>
+
+        <!-- 5/18 -->
+        <div class="tl-block tl-drive" style="grid-column:7;grid-row:4/7;"><span class="t">10:00–13:00</span><span>피엔차 드라이브</span></div>
+        <div class="tl-block tl-sight" style="grid-column:7;grid-row:8/11;"><span class="t">14:00–17:00</span><span>피엔차 투어</span></div>
+        <div class="tl-block tl-lodge" style="grid-column:7;grid-row:11/16;"><span class="t">17:00–22:00</span><span>숙소</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wf-target">
+    <span class="chip-num" aria-hidden="true">③</span>
+    <div class="tl-legend">
+      <div class="tl-legend-item"><span class="tl-legend-swatch" style="background:var(--blk-move);"></span>이동/공항</div>
+      <div class="tl-legend-item"><span class="tl-legend-swatch" style="background:var(--blk-tour);"></span>투어/관광</div>
+      <div class="tl-legend-item"><span class="tl-legend-swatch" style="background:var(--blk-sight);"></span>스팟/명소</div>
+      <div class="tl-legend-item"><span class="tl-legend-swatch" style="background:var(--blk-drive);"></span>드라이브/액티비티</div>
+      <div class="tl-legend-item"><span class="tl-legend-swatch" style="background:var(--blk-lodge);"></span>숙소</div>
+      <div class="tl-legend-item"><span class="tl-legend-swatch" style="background:var(--blk-free);"></span>자유시간</div>
+    </div>
+  </div>
+
+  <div class="wf-notes">
+    <span class="wf-notes-title">와이어프레임 노트</span>
+    <div class="wf-list">
+      <div class="wf-item"><span class="wf-item-num">①</span><span><b>도시 그룹 헤더</b> — <span class="d">기존 구글시트 일정표의 멘탈 모델을 유지해, 도시 단위로 며칠 머무는지 한눈에 보여줍니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">②</span><span><b>시간 그리드와 블록</b> — <span class="d">후보 보드에서 드래그해 시간 슬롯에 배치하고, 블록 경계를 끌어 길이를 조절합니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">③</span><span><b>블록 타입 색상</b> — <span class="d">스팟/이동/숙소/자유 메모를 색으로 구분해 하루 일정의 성격을 빠르게 파악합니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">④</span><span><b>가로 스크롤</b> — <span class="d">전체 여정이 길어도 좌우로 스크롤해 탐색할 수 있습니다.</span></span></div>
+    </div>
+    <div class="wf-notes-extra">모바일에서는 일 단위 세로 리스트로 전환됩니다 (P0).</div>
+  </div>
+</section>
+
+<!-- ===================== S4. 지도 뷰 ===================== -->
+<section class="screen" id="screen-map" hidden="">
+  <div class="screen-head">
+    <h1 class="screen-title">지도 뷰</h1>
+    <p class="screen-desc">후보와 확정 일정을 지도 위에서 함께 보고, 그 자리에서 일정에 추가합니다.</p>
+  </div>
+
+  <div class="ws-header">
+    <div class="ws-id">
+      <span class="ws-title">이탈리아 여행</span>
+      <span class="ws-dates num">5/11 (월) – 5/23 (토)</span>
+    </div>
+    <div class="ws-members">
+      <div class="avatar-group">
+        <div class="avatar" title="Simon (Owner)">S</div>
+        <div class="avatar" title="하잉 (Editor)">하</div>
+      </div>
+      <button type="button" class="btn btn-sm invite-btn">+ 멤버 초대</button>
+      <span class="invite-tip" hidden="">초대 링크가 복사되었습니다 ✓</span>
+    </div>
+    <div class="ws-subtabs">
+      <button type="button" class="sub-tab tab-btn" data-target="screen-board">후보 보드</button>
+      <button type="button" class="sub-tab tab-btn" data-target="screen-timeline">타임라인</button>
+      <button type="button" class="sub-tab tab-btn" data-target="screen-map">지도</button>
+      <button type="button" class="sub-tab tab-btn" data-target="screen-today">Today</button>
+    </div>
+  </div>
+
+  <div class="wf-target">
+    <span class="chip-num" aria-hidden="true">②</span>
+    <div class="map-filterbar">
+      <div class="filter-group">
+        <span class="filter-group-label">날짜</span>
+        <select class="date-select" id="map-date-filter">
+          <option value="all">전체</option>
+          <option value="5/13">5/13</option>
+          <option value="5/14">5/14</option>
+        </select>
+      </div>
+      <div class="filter-group" role="group" aria-label="상태 필터">
+        <span class="filter-group-label">상태</span>
+        <button type="button" class="chip map-status-chip is-active" data-status="all">전체</button>
+        <button type="button" class="chip map-status-chip" data-status="planned">확정만</button>
+        <button type="button" class="chip map-status-chip" data-status="candidate">후보만</button>
+      </div>
+      <div class="filter-group" role="group" aria-label="카테고리 필터">
+        <span class="filter-group-label">카테고리</span>
+        <button type="button" class="chip map-cat-chip is-active" data-cat="tour">관광</button>
+        <button type="button" class="chip map-cat-chip is-active" data-cat="food">식당</button>
+        <button type="button" class="chip map-cat-chip is-active" data-cat="shop">쇼핑</button>
+        <button type="button" class="chip map-cat-chip is-active" data-cat="lodge">숙소</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="wf-target">
+    <span class="chip-num" aria-hidden="true">①</span>
+    <div class="map-legend">
+      <span><span class="dot" style="background:var(--accent);"></span>확정 일정</span>
+      <span><span class="dot" style="background:var(--ink-soft);"></span>후보</span>
+      <span><span class="star-ico">★</span> 우선순위</span>
+    </div>
+  </div>
+
+  <div class="map-layout">
+    <div class="wf-target" style="margin-top:0;">
+      <span class="chip-num" aria-hidden="true">④</span>
+      <div class="map-canvas" id="map-canvas">
+        <svg viewBox="0 0 600 480" width="100%" height="100%" preserveAspectRatio="none" aria-hidden="true">
+          <rect x="0" y="0" width="600" height="480" style="fill:var(--surface);"></rect>
+          <rect x="40" y="60" width="120" height="90" style="fill:var(--bg);"></rect>
+          <rect x="220" y="40" width="90" height="70" style="fill:var(--bg);"></rect>
+          <rect x="380" y="70" width="140" height="100" style="fill:var(--bg);"></rect>
+          <rect x="90" y="300" width="150" height="110" style="fill:var(--bg);"></rect>
+          <rect x="330" y="280" width="180" height="120" style="fill:var(--bg);"></rect>
+          <path d="M0,120 L150,110 L300,150 L600,130" style="stroke:var(--line);" stroke-width="3" fill="none"></path>
+          <path d="M60,0 L90,480" style="stroke:var(--line);" stroke-width="3" fill="none"></path>
+          <path d="M0,260 L600,240" style="stroke:var(--line);" stroke-width="3" fill="none"></path>
+          <path d="M420,0 L400,480" style="stroke:var(--line);" stroke-width="3" fill="none"></path>
+          <path d="M-20,250 C 120,220 220,290 320,260 C 430,230 520,270 620,250" stroke="#6FA3D3" stroke-width="16" fill="none" opacity="0.45"></path>
+          <path d="M-20,258 C 120,228 220,298 320,268 C 430,238 520,278 620,258" stroke="#3E7FB0" stroke-width="4" fill="none" opacity="0.55"></path>
+        </svg>
+        <span class="map-mocklabel">지도 목업 — 실제 서비스는 Google Maps 임베딩</span>
+
+        <button type="button" class="pin-btn pin-confirmed" data-cat="tour" data-status="planned" data-date="5/14" data-name="산타마리아 노벨라 성당" data-hours="9:30–17:30" data-memo="하잉이 꼭 가고 싶은 곳" data-star="1" style="left:16%; top:24%;">
+          <span class="pin-shape"><span class="glyph">★</span></span>
+          <span class="pin-label">산타마리아 노벨라</span>
+        </button>
+        <button type="button" class="pin-btn pin-confirmed" data-cat="tour" data-status="planned" data-date="5/14" data-name="두오모 (산타마리아 델 피오레)" data-hours="10:15–15:45" data-memo="성당 무료 / 쿠폴라 유료" style="left:42%; top:22%;">
+          <span class="pin-shape"></span>
+          <span class="pin-label">두오모</span>
+        </button>
+        <button type="button" class="pin-btn pin-candidate" data-cat="tour" data-status="candidate" data-date="" data-name="우피치 미술관" data-hours="8:15–18:30 · $25" data-memo="예약 필요할 듯" style="left:47%; top:44%;">
+          <span class="pin-shape"></span>
+          <span class="pin-label">우피치 미술관</span>
+        </button>
+        <button type="button" class="pin-btn pin-confirmed" data-cat="tour" data-status="planned" data-date="5/14" data-name="미켈란젤로 광장" data-hours="상시 · 무료" data-memo="야경 명소, 베키오 다리에서 도보 15분" data-star="1" style="left:65%; top:72%;">
+          <span class="pin-shape"><span class="glyph">★</span></span>
+          <span class="pin-label">미켈란젤로 광장</span>
+        </button>
+        <button type="button" class="pin-btn pin-candidate" data-cat="shop" data-status="candidate" data-date="" data-name="포르첼리노 시장" data-hours="메르카토 첸트랄레 주변" data-memo="" style="left:38%; top:52%;">
+          <span class="pin-shape"></span>
+          <span class="pin-label">포르첼리노 시장</span>
+        </button>
+        <button type="button" class="pin-btn pin-confirmed" data-cat="tour" data-status="planned" data-date="5/14" data-name="베키오 다리" data-hours="상시" data-memo="시뇨리아 광장 도보 3분" style="left:52%; top:58%;">
+          <span class="pin-shape"></span>
+          <span class="pin-label">베키오 다리</span>
+        </button>
+        <button type="button" class="pin-btn pin-candidate" data-cat="tour" data-status="candidate" data-date="" data-name="산타 크로체 성당" data-hours="9:30–17:30 · $10" data-memo="" style="left:70%; top:40%;">
+          <span class="pin-shape"></span>
+          <span class="pin-label">산타 크로체</span>
+        </button>
+        <button type="button" class="pin-btn pin-confirmed" data-cat="food" data-status="planned" data-date="5/13" data-name="Trattoria Zà Zà" data-hours="11:00–23:00" data-memo="티본 스테이크" style="left:26%; top:66%;">
+          <span class="pin-shape"></span>
+          <span class="pin-label">Zà Zà</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="wf-target" style="margin-top:0;">
+      <span class="chip-num" aria-hidden="true">③</span>
+      <div class="map-detail" id="map-detail">
+        <div class="map-detail-empty">지도의 마커를 클릭하면<br />여기에 상세 정보가 표시됩니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wf-notes">
+    <span class="wf-notes-title">와이어프레임 노트</span>
+    <div class="wf-list">
+      <div class="wf-item"><span class="wf-item-num">①</span><span><b>후보 vs 확정 마커 구분</b> — <span class="d">회색 핀은 후보, 파란 핀은 일정에 확정된 스팟입니다. ★는 우선순위 표시입니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">②</span><span><b>필터로 동선 확인</b> — <span class="d">날짜·상태·카테고리 필터를 조합해 특정 하루의 동선만 골라 볼 수 있습니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">③</span><span><b>마커 → 상세 → 일정 추가</b> — <span class="d">마커를 클릭하면 상세 카드가 뜨고, 지도에서 바로 일정에 배치할 수 있습니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">④</span><span><b>실서비스 구현</b> — <span class="d">이 지도는 스타일라이즈드 목업이며, 실서비스는 Google Maps JavaScript API로 임베딩됩니다.</span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== S5. Today (여행 중 모드) ===================== -->
+<section class="screen" id="screen-today" hidden="">
+  <div class="screen-head">
+    <h1 class="screen-title">Today — 여행 중 모드</h1>
+    <p class="screen-desc">Travel Maker의 핵심 차별 화면. 현재 일정의 위치와 남은 시간을 기준으로 지금 갈 만한 곳을 추천합니다 — GPS 권한 없이 동작합니다.</p>
+  </div>
+
+  <div class="today-layout">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="phone-topbar">
+          <div>
+            <div class="phone-date">5/16 (토) · 시에나</div>
+            <div class="phone-time num">14:32</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div class="avatar-group">
+              <div class="avatar" style="width:20px;height:20px;font-size:9px;" title="Simon">S</div>
+              <div class="avatar" style="width:20px;height:20px;font-size:9px;" title="하잉">하</div>
+            </div>
+            <span class="sync-dot"><span class="pulse">●</span> 실시간</span>
+          </div>
+        </div>
+
+        <div class="phone-body">
+          <div class="wf-target" style="margin:0;">
+            <span class="chip-num" aria-hidden="true">①</span>
+            <div class="now-stack">
+              <div class="cur-card">
+                <div class="lbl">현재 일정</div>
+                <div class="main">자유시간 <span class="num">14:00–17:00</span> <span class="badge-live">진행 중</span></div>
+                <div class="prev-line">직전: 시에나 투어 <span class="num">11:00–14:00</span> 종료</div>
+              </div>
+              <div class="next-card">
+                <div class="lbl">다음 일정</div>
+                <div class="main">숙소 체크인 17:00 (토스카나)</div>
+                <span class="empty-chip num">남은 시간 2시간 28분</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="wf-target" style="margin:0;">
+            <span class="chip-num" aria-hidden="true">②</span>
+            <div>
+              <div class="reco-head">지금 갈 만한 곳</div>
+              <div class="reco-sub">현재 일정(시에나) 위치 기준 · 영업 중 · 17:00 전 이동 가능</div>
+              <div class="reco-list">
+                <div class="wf-target" style="margin:0;">
+                  <span class="chip-num" aria-hidden="true">③</span>
+                  <div class="reco-card" data-name="시에나 두오모" data-star="1">
+                    <div class="reco-main">
+                      <div class="reco-name">시에나 두오모 <span class="star-ico">★</span></div>
+                      <div class="reco-dist">도보 6분(시에나 투어에서)</div>
+                      <span class="reco-status reco-ok">영업 중 · 19:00 마감</span>
+                    </div>
+                    <button type="button" class="reco-add-btn">+ 일정에 넣기</button>
+                  </div>
+                </div>
+                <div class="reco-card" data-name="캄포 광장 젤라토" data-star="0">
+                  <div class="reco-main">
+                    <div class="reco-name">캄포 광장 젤라토</div>
+                    <div class="reco-dist">도보 4분(시에나 투어에서)</div>
+                    <span class="reco-status reco-ok">영업 중</span>
+                  </div>
+                  <button type="button" class="reco-add-btn">+ 일정에 넣기</button>
+                </div>
+                <div class="reco-card" data-name="산 도메니코 성당" data-star="0">
+                  <div class="reco-main">
+                    <div class="reco-name">산 도메니코 성당</div>
+                    <div class="reco-dist">도보 12분(시에나 투어에서)</div>
+                    <span class="reco-status reco-warn">16:30 마감 임박</span>
+                  </div>
+                  <button type="button" class="reco-add-btn">+ 일정에 넣기</button>
+                </div>
+              </div>
+              <div class="wf-target" style="margin:6px 0 0;">
+                <span class="chip-num" aria-hidden="true">④</span>
+                <div class="share-feedback" id="share-feedback" hidden="">하잉님에게 공유됨 ✓</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="wf-target" style="margin:0;">
+            <span class="chip-num" aria-hidden="true">⑤</span>
+            <div class="next-phase">
+              <div class="np-head">
+                <span class="np-title">사람들이 많이 가는 곳</span>
+                <span class="badge-np">Next Phase</span>
+              </div>
+              <div class="np-list" aria-disabled="true">
+                <div class="np-card">
+                  <div class="reco-name">Torre del Mangia</div>
+                  <div class="reco-dist">방문자 인기 상위</div>
+                </div>
+                <div class="np-card">
+                  <div class="reco-name">Osteria Le Logge</div>
+                  <div class="reco-dist">현지 인기 식당</div>
+                </div>
+              </div>
+              <div class="np-caption">후보에 없어도 주변 인기 장소를 제안 (P1)</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="mini-tl-head">오늘 타임라인</div>
+            <ul class="mini-tl" id="mini-tl">
+              <li class="tl-item" data-dot="lodge"><span class="tl-time num">10:00</span><span>조식</span></li>
+              <li class="tl-item" data-dot="tour"><span class="tl-time num">11:00</span><span>시에나 투어</span></li>
+              <li class="tl-item tl-empty" id="today-empty-slot" data-dot="free"><span class="tl-time num">14:30</span><span>빈 시간 — 여기에 추천이 삽입됨</span></li>
+              <li class="tl-item" data-dot="lodge"><span class="tl-time num">17:00</span><span>숙소 체크인</span></li>
+            </ul>
+          </div>
+        </div>
+
+        <nav class="tabbar-mock" aria-label="Today 하단 탭">
+          <button type="button" class="tabbar-btn is-active tab-btn" data-target="screen-today">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"></circle></svg>
+            오늘
+          </button>
+          <button type="button" class="tabbar-btn tab-btn" data-target="screen-board">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 L14.6 9.2 L21.5 9.8 L16.3 14.3 L17.8 21 L12 17.4 L6.2 21 L7.7 14.3 L2.5 9.8 L9.4 9.2 Z"></path></svg>
+            후보
+          </button>
+          <button type="button" class="tabbar-btn tab-btn" data-target="screen-map">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21 C7 15 5 11.5 5 8.5 A7 7 0 0 1 19 8.5 C19 11.5 17 15 12 21 Z"></path><circle cx="12" cy="8.5" r="2.4"></circle></svg>
+            지도
+          </button>
+          <button type="button" class="tabbar-btn tab-btn" data-target="screen-timeline">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="4.5" width="17" height="16" rx="2"></rect><line x1="3.5" y1="9.5" x2="20.5" y2="9.5"></line></svg>
+            일정
+          </button>
+        </nav>
+      </div>
+    </div>
+
+    <div class="today-side">
+      <h3>여행 중에는 모바일로 이 화면만 봅니다</h3>
+      <p class="text-soft text-sm">미리 짠 일정이 틀어져도, 현재 일정의 위치와 남는 시간만으로 다음 행동을 3탭 이내에 정할 수 있도록 설계했습니다.</p>
+      <ul>
+        <li>현재 일정과 다음 일정이 항상 함께 보이고, 남은 시간이 자동 계산됩니다.</li>
+        <li>추천 기준점은 GPS가 아니라 현재 일정의 위치입니다 — 위치 권한이 필요 없습니다.</li>
+        <li>진행 중 일정이 없으면 직전 일정 → 숙소 순으로 기준점을 대신합니다.</li>
+        <li>추가하면 동행자 화면에도 곧바로 반영됩니다.</li>
+        <li>후보 밖 인기 장소 추천은 Next Phase(P1)로 예고만 표시합니다.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="wf-notes">
+    <span class="wf-notes-title">와이어프레임 노트</span>
+    <div class="wf-list">
+      <div class="wf-item"><span class="wf-item-num">①</span><span><b>현재 일정 + 다음 일정 동시 표시</b> — <span class="d">현재 시각 기준 현재 일정과 다음 일정이 항상 함께 보이고, 다음 일정까지 남은 시간이 자동 계산됩니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">②</span><span><b>추천 기준: 현재 일정의 위치 + 저장한 후보</b> — <span class="d">GPS 권한이 필요 없습니다. 진행 중 일정이 없으면 직전 일정 → 숙소 순으로 기준점을 fallback합니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">③</span><span><b>원탭 일정 편입</b> — <span class="d">추천 카드에서 버튼 한 번으로 오늘 일정의 빈 슬롯에 삽입됩니다 (3탭 이내 목표).</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">④</span><span><b>준실시간 동기화</b> — <span class="d">변경 사항은 동행자 화면에도 새로고침 없이 반영됩니다.</span></span></div>
+      <div class="wf-item"><span class="wf-item-num">⑤</span><span><b>Next Phase: 후보 밖 인기 장소 추천</b> — <span class="d">Google Places 인기 데이터 기반으로 후보에 없는 주변 장소를 제안합니다 (P1).</span></span></div>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  Travel Maker 프로토타입 v0.1 · PRD v0.1 기준 · 2026-07-18 · 목업 데이터는 실제 이탈리아 여행 계획에서 발췌
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- 탭 전환 (메인 탭 + 워크스페이스 서브 탭 + 폰 하단 탭 통합) ---------- */
+  var screens = document.querySelectorAll(".screen");
+  var tabBtns = document.querySelectorAll(".tab-btn[data-target]");
+
+  function showScreen(id) {
+    screens.forEach(function (s) { s.hidden = s.id !== id; });
+    tabBtns.forEach(function (b) { b.classList.toggle("is-active", b.dataset.target === id); });
+  }
+
+  tabBtns.forEach(function (b) {
+    b.addEventListener("click", function () { showScreen(b.dataset.target); });
+  });
+
+  showScreen("screen-overview");
+
+  /* ---------- S1: 새 여행 만들기 (비활성 데모) ---------- */
+  var newTripBtn = document.getElementById("new-trip-btn");
+  var newTripNote = document.getElementById("new-trip-note");
+  if (newTripBtn && newTripNote) {
+    newTripBtn.addEventListener("click", function () {
+      newTripNote.hidden = false;
+      window.setTimeout(function () { newTripNote.hidden = true; }, 2200);
+    });
+  }
+
+  /* ---------- S1: 초대 수락 / 거절 ---------- */
+  var inviteCard = document.getElementById("invite-card");
+  if (inviteCard) {
+    inviteCard.addEventListener("click", function (e) {
+      var btn = e.target.closest("[data-invite]");
+      if (!btn) { return; }
+      var copy = document.getElementById("invite-copy");
+      var actions = document.getElementById("invite-actions");
+      if (btn.dataset.invite === "accept") {
+        copy.innerHTML = "오사카 벚꽃 여행 — <b>합류했습니다 ✓</b>";
+      } else {
+        copy.innerHTML = "오사카 벚꽃 여행 — 초대를 거절했습니다";
+      }
+      if (actions) { actions.remove(); }
+    });
+  }
+
+  /* ---------- 워크스페이스 헤더: 멤버 초대 데모 (S2/S3/S4 공통) ---------- */
+  document.querySelectorAll(".invite-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var tip = btn.parentElement.querySelector(".invite-tip");
+      if (!tip) { return; }
+      tip.hidden = false;
+      window.setTimeout(function () { tip.hidden = true; }, 2200);
+    });
+  });
+
+  /* ---------- S2: 검색 드롭다운 토글 ---------- */
+  var searchToggle = document.getElementById("search-toggle");
+  var searchDropdown = document.getElementById("search-dropdown");
+  if (searchToggle && searchDropdown) {
+    searchToggle.addEventListener("click", function () {
+      var isHidden = searchDropdown.hidden;
+      searchDropdown.hidden = !isHidden;
+      searchToggle.setAttribute("aria-expanded", String(isHidden));
+    });
+  }
+
+  /* ---------- S2: 직접 입력 패널 토글 ---------- */
+  var directToggle = document.getElementById("direct-input-toggle");
+  var directPanel = document.getElementById("direct-input-panel");
+  if (directToggle && directPanel) {
+    directToggle.addEventListener("click", function () {
+      directPanel.hidden = !directPanel.hidden;
+    });
+  }
+
+  /* ---------- S2: 도시 그룹 + 상태 필터 ---------- */
+  var groupBtns = document.querySelectorAll(".group-nav-btn");
+  var statusChips = document.querySelectorAll(".status-chip");
+  var groupPanels = document.querySelectorAll(".spot-group-panel");
+
+  function applyBoardFilters() {
+    var activeGroupBtn = document.querySelector(".group-nav-btn.is-active");
+    var activeStatusChip = document.querySelector(".status-chip.is-active");
+    var group = activeGroupBtn ? activeGroupBtn.dataset.group : "florence";
+    var status = activeStatusChip ? activeStatusChip.dataset.status : "all";
+
+    groupPanels.forEach(function (panel) { panel.hidden = panel.dataset.group !== group; });
+
+    document.querySelectorAll(".spot-group-panel .spot-card").forEach(function (card) {
+      var show = status === "all" || card.dataset.status === status;
+      card.style.display = show ? "" : "none";
+    });
+  }
+
+  groupBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      groupBtns.forEach(function (x) { x.classList.remove("is-active"); });
+      b.classList.add("is-active");
+      applyBoardFilters();
+    });
+  });
+  statusChips.forEach(function (c) {
+    c.addEventListener("click", function () {
+      statusChips.forEach(function (x) { x.classList.remove("is-active"); });
+      c.classList.add("is-active");
+      applyBoardFilters();
+    });
+  });
+
+  /* ---------- S4: 지도 필터 + 마커 상세 ---------- */
+  var mapCanvas = document.getElementById("map-canvas");
+  var mapDetail = document.getElementById("map-detail");
+  var mapDateFilter = document.getElementById("map-date-filter");
+  var mapStatusChips = document.querySelectorAll(".map-status-chip");
+  var mapCatChips = document.querySelectorAll(".map-cat-chip");
+  var pins = document.querySelectorAll(".pin-btn");
+
+  function applyMapFilters() {
+    var date = mapDateFilter ? mapDateFilter.value : "all";
+    var activeStatusChip = document.querySelector(".map-status-chip.is-active");
+    var status = activeStatusChip ? activeStatusChip.dataset.status : "all";
+    var activeCats = Array.prototype.map.call(
+      document.querySelectorAll(".map-cat-chip.is-active"),
+      function (c) { return c.dataset.cat; }
+    );
+
+    pins.forEach(function (pin) {
+      var okDate = date === "all" || pin.dataset.date === date;
+      var okStatus = status === "all" || pin.dataset.status === status;
+      var okCat = activeCats.indexOf(pin.dataset.cat) !== -1;
+      pin.classList.toggle("is-hidden", !(okDate && okStatus && okCat));
+    });
+  }
+
+  if (mapDateFilter) { mapDateFilter.addEventListener("change", applyMapFilters); }
+  mapStatusChips.forEach(function (c) {
+    c.addEventListener("click", function () {
+      mapStatusChips.forEach(function (x) { x.classList.remove("is-active"); });
+      c.classList.add("is-active");
+      applyMapFilters();
+    });
+  });
+  mapCatChips.forEach(function (c) {
+    c.addEventListener("click", function () {
+      c.classList.toggle("is-active");
+      applyMapFilters();
+    });
+  });
+
+  function renderMapDetail(pin) {
+    if (!mapDetail) { return; }
+    var isPlaced = pin.dataset.status === "planned";
+    var star = pin.dataset.star === "1" ? ' <span class="star-ico">★</span>' : "";
+    var catLabel = { tour: "관광", food: "식당", shop: "쇼핑", lodge: "숙소" }[pin.dataset.cat] || "기타";
+    var memoBlock = pin.dataset.memo ? '<div class="map-detail-memo">' + pin.dataset.memo + "</div>" : "";
+    mapDetail.innerHTML =
+      '<div class="map-detail-name">' + pin.dataset.name + star + "</div>" +
+      '<div class="status-badge ' + (isPlaced ? "status-planned" : "status-candidate") + '" id="map-detail-status">' + (isPlaced ? "배치됨" : "후보") + "</div>" +
+      '<div class="map-detail-row">' + catLabel + " · " + pin.dataset.hours + "</div>" +
+      memoBlock +
+      '<button type="button" class="btn btn-primary btn-sm" id="map-add-btn" style="margin-top:12px;" ' + (isPlaced ? "disabled" : "") + ">" +
+      (isPlaced ? "이미 배치됨" : "일정에 추가") + "</button>" +
+      '<div class="map-toast" id="map-toast" hidden="">타임라인에 추가됨 ✓</div>';
+
+    var addBtn = document.getElementById("map-add-btn");
+    if (addBtn && !isPlaced) {
+      addBtn.addEventListener("click", function () {
+        pin.dataset.status = "planned";
+        pin.classList.remove("pin-candidate");
+        pin.classList.add("pin-confirmed");
+        addBtn.disabled = true;
+        addBtn.textContent = "배치됨 ✓";
+        var statusBadge = document.getElementById("map-detail-status");
+        if (statusBadge) {
+          statusBadge.textContent = "배치됨";
+          statusBadge.classList.remove("status-candidate");
+          statusBadge.classList.add("status-planned");
+        }
+        var toast = document.getElementById("map-toast");
+        if (toast) { toast.hidden = false; }
+        applyMapFilters();
+      });
+    }
+  }
+
+  pins.forEach(function (pin) {
+    pin.addEventListener("click", function () {
+      pins.forEach(function (p) { p.classList.remove("is-selected"); });
+      pin.classList.add("is-selected");
+      renderMapDetail(pin);
+    });
+  });
+
+  /* ---------- S5: Today 추천 → 일정 삽입 데모 ---------- */
+  function addMinutes(hhmm, mins) {
+    var parts = hhmm.split(":");
+    var total = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10) + mins;
+    var h = Math.floor(total / 60) % 24;
+    var m = total % 60;
+    return (h < 10 ? "0" + h : h) + ":" + (m < 10 ? "0" + m : m);
+  }
+
+  function insertRecoIntoTimeline(name, star) {
+    var slot = document.getElementById("today-empty-slot");
+    if (!slot) { return; }
+    slot.removeAttribute("id");
+    slot.classList.remove("tl-empty");
+    slot.dataset.dot = "sight";
+    var timeSpan = slot.querySelector(".tl-time");
+    var startLabel = timeSpan.textContent.trim();
+    slot.querySelector("span:last-child").textContent = name + (star ? " ★" : "") + " (추가됨)";
+
+    var newSlot = document.createElement("li");
+    newSlot.className = "tl-item tl-empty";
+    newSlot.id = "today-empty-slot";
+    newSlot.dataset.dot = "free";
+    var nextTime = addMinutes(startLabel, 30);
+    newSlot.innerHTML = '<span class="tl-time num">' + nextTime + '</span><span>빈 시간 — 여기에 추천이 삽입됨</span>';
+    slot.parentNode.insertBefore(newSlot, slot.nextSibling);
+  }
+
+  var shareFeedback = document.getElementById("share-feedback");
+  document.querySelectorAll(".reco-add-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var card = btn.closest(".reco-card");
+      if (!card) { return; }
+      var name = card.dataset.name;
+      var star = card.dataset.star === "1";
+      insertRecoIntoTimeline(name, star);
+      card.classList.add("is-added");
+      btn.disabled = true;
+      if (shareFeedback) {
+        shareFeedback.hidden = false;
+        window.clearTimeout(shareFeedback._t);
+        shareFeedback._t = window.setTimeout(function () { shareFeedback.hidden = true; }, 3200);
+      }
+    });
+  });
+})();
+</script>
