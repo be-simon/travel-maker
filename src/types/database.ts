@@ -3,6 +3,7 @@ export type TripMemberStatus = 'pending' | 'active'
 export type SpotCategory = 'sight' | 'restaurant' | 'cafe' | 'shopping' | 'lodging' | 'etc'
 export type SpotStatus = 'candidate' | 'planned' | 'visited'
 export type BookmarkSource = 'manual' | 'gmap_link' | 'ocr'
+export type BlockType = 'spot' | 'transport' | 'lodging' | 'memo'
 
 export interface Trip {
   id: number
@@ -63,6 +64,20 @@ export interface Spot {
   est_cost: number | null
   link: string | null
   status: SpotStatus
+  created_at: string
+  updated_at: string
+}
+
+export interface PlanBlock {
+  id: number
+  trip_id: number
+  date: string
+  start_time: string
+  end_time: string
+  type: BlockType
+  spot_id: number | null
+  title: string
+  memo: string | null
   created_at: string
   updated_at: string
 }
