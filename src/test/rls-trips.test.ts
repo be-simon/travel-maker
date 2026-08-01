@@ -50,7 +50,7 @@ describe('trips RLS', () => {
     expect(members![0]).toMatchObject({ role: 'owner', status: 'active', user_id: owner.user.id })
   })
 
-  it('invited member sees the trip only after accepting, and a stranger cannot self-insert membership', async () => {
+  it('invited member can see the trip while pending (to know what they were invited to), becomes an active member only after accepting, and a stranger cannot self-insert membership or see the trip at all', async () => {
     const owner = await createTestUser(`owner-${Date.now()}@example.com`)
     const invitee = await createTestUser(`invitee-${Date.now()}@example.com`)
     const stranger = await createTestUser(`stranger2-${Date.now()}@example.com`)
@@ -73,14 +73,41 @@ describe('trips RLS', () => {
       status: 'pending',
     })
 
+    // Pending invitee can see the trip itself (so the "받은 초대" UI can show
+    // what they're being invited to) via private.has_pending_invite(), but
+    // is not yet an active member.
     const { data: beforeAccept } = await inviteeClient.from('trips').select().eq('id', trip!.id)
-    expect(beforeAccept).toEqual([])
+    expect(beforeAccept).toHaveLength(1)
+    expect(beforeAccept![0].title).toBe('Spain')
+
+    const { data: ownRowBeforeAccept } = await inviteeClient
+      .from('trip_members')
+      .select()
+      .eq('trip_id', trip!.id)
+      .eq('invited_email', invitee.user.email!)
+      .single()
+    expect(ownRowBeforeAccept?.status).toBe('pending')
+    expect(ownRowBeforeAccept?.user_id).toBeNull()
 
     const { error: acceptError } = await inviteeClient.rpc('accept_trip_invite', { p_trip_id: trip!.id })
     expect(acceptError).toBeNull()
 
     const { data: afterAccept } = await inviteeClient.from('trips').select().eq('id', trip!.id)
     expect(afterAccept).toHaveLength(1)
+
+    const { data: ownRowAfterAccept } = await inviteeClient
+      .from('trip_members')
+      .select()
+      .eq('trip_id', trip!.id)
+      .eq('invited_email', invitee.user.email!)
+      .single()
+    expect(ownRowAfterAccept?.status).toBe('active')
+    expect(ownRowAfterAccept?.user_id).toBe(invitee.user.id)
+
+    // A stranger with no invite at all never sees the trip, before or after
+    // the invitee accepts, and cannot self-insert membership.
+    const { data: strangerView } = await strangerClient.from('trips').select().eq('id', trip!.id)
+    expect(strangerView).toEqual([])
 
     const { error: strangerInsertError } = await strangerClient.from('trip_members').insert({
       trip_id: trip!.id,
