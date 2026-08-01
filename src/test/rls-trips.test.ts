@@ -117,4 +117,49 @@ describe('trips RLS', () => {
     })
     expect(strangerInsertError).not.toBeNull()
   })
+
+  it('an active editor cannot reassign owner_id to themselves (privilege escalation guard)', async () => {
+    const owner = await createTestUser(`owner-${Date.now()}@example.com`)
+    const editor = await createTestUser(`editor-${Date.now()}@example.com`)
+    createdUserIds.push(owner.user.id, editor.user.id)
+
+    const ownerClient = await signInAsClient(owner.user.email!, owner.password)
+    const editorClient = await signInAsClient(editor.user.email!, editor.password)
+
+    const { data: trip } = await ownerClient
+      .from('trips')
+      .insert({ title: 'France', start_date: '2026-11-01', end_date: '2026-11-05', owner_id: owner.user.id })
+      .select()
+      .single()
+
+    await ownerClient.from('trip_members').insert({
+      trip_id: trip!.id,
+      invited_email: editor.user.email!,
+      role: 'editor',
+      status: 'pending',
+    })
+    const { error: acceptError } = await editorClient.rpc('accept_trip_invite', { p_trip_id: trip!.id })
+    expect(acceptError).toBeNull()
+
+    // The editor passes trips_update's USING clause (active member) and, before
+    // the private.enforce_trip_owner_immutable() trigger, could also pass its
+    // WITH CHECK by setting owner_id = auth.uid() — then DELETE (owner-only)
+    // the trip out from under the real owner. The BEFORE UPDATE trigger must
+    // reject this regardless of RLS.
+    const { error: escalationError } = await editorClient
+      .from('trips')
+      .update({ owner_id: editor.user.id })
+      .eq('id', trip!.id)
+    expect(escalationError).not.toBeNull()
+
+    const { data: stillOwnedByOwner } = await ownerClient.from('trips').select('owner_id').eq('id', trip!.id).single()
+    expect(stillOwnedByOwner?.owner_id).toBe(owner.user.id)
+
+    // Editors can still edit trip details (owner_id untouched) — must not regress F2.
+    const { error: legitEditError } = await editorClient
+      .from('trips')
+      .update({ title: 'France (updated)' })
+      .eq('id', trip!.id)
+    expect(legitEditError).toBeNull()
+  })
 })
