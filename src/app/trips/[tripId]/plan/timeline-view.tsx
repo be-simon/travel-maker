@@ -29,7 +29,7 @@ function minutesToPx(minutes: number): number {
   return (minutes / SLOT_MINUTES) * PX_PER_SLOT
 }
 
-function enumerateDates(startDate: string, endDate: string): string[] {
+export function enumerateDates(startDate: string, endDate: string): string[] {
   const dates: string[] = []
   // UTC로 파싱/증가시켜야 한다: 'T00:00:00'(타임존 없음)을 로컬 자정으로 파싱한
   // 뒤 toISOString()(UTC)으로 읽으면, UTC+ 타임존(한국 등)에서 모든 날짜가
