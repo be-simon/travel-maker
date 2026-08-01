@@ -4,7 +4,10 @@ import { InviteForm } from './invite-form'
 
 export default async function TripPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params
-  const trip = await getTrip(Number(tripId))
+  const numericTripId = Number(tripId)
+  if (!Number.isInteger(numericTripId)) notFound()
+
+  const trip = await getTrip(numericTripId)
   if (!trip) notFound()
 
   const members = await listTripMembers(trip.id)
