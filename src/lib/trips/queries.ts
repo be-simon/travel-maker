@@ -8,7 +8,7 @@ export async function listMyTrips(): Promise<Trip[]> {
   return data
 }
 
-export async function listPendingInvites(): Promise<(TripMember & { trip: Trip })[]> {
+export async function listPendingInvites(): Promise<(TripMember & { trip: Trip | null })[]> {
   const supabase = await createClient()
   const { data: userData } = await supabase.auth.getUser()
   const email = userData.user?.email
@@ -20,7 +20,7 @@ export async function listPendingInvites(): Promise<(TripMember & { trip: Trip }
     .eq('invited_email', email)
     .eq('status', 'pending')
   if (error) throw error
-  return data as unknown as (TripMember & { trip: Trip })[]
+  return data as unknown as (TripMember & { trip: Trip | null })[]
 }
 
 export async function getTrip(tripId: number): Promise<Trip | null> {

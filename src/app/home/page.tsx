@@ -15,7 +15,14 @@ export default async function HomePage() {
     <main className="mx-auto max-w-2xl p-6">
       <div className="mb-8 flex items-center justify-between">
         <h1 className="text-xl font-semibold">내 여행</h1>
-        <Button render={<Link href="/trips/new">+ 새 여행 만들기</Link>} />
+        <div className="flex items-center gap-2">
+          <Button render={<Link href="/trips/new">+ 새 여행 만들기</Link>} />
+          <form action="/auth/signout" method="post">
+            <Button type="submit" variant="outline">
+              로그아웃
+            </Button>
+          </form>
+        </div>
       </div>
 
       {invites.length > 0 && (

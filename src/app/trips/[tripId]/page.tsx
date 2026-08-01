@@ -1,16 +1,24 @@
 import { notFound } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
 import { getTrip, listTripMembers } from '@/lib/trips/queries'
 import { InviteForm } from './invite-form'
 
 export default async function TripPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params
+  if (!/^\d+$/.test(tripId)) notFound()
   const numericTripId = Number(tripId)
-  if (!Number.isInteger(numericTripId)) notFound()
 
   const trip = await getTrip(numericTripId)
   if (!trip) notFound()
 
   const members = await listTripMembers(trip.id)
+
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  const currentMember = members.find((member) => member.user_id === user?.id)
+  const canInvite = currentMember?.role === 'owner'
 
   return (
     <main className="mx-auto max-w-2xl p-6">
@@ -43,7 +51,7 @@ export default async function TripPage({ params }: { params: Promise<{ tripId: s
             </li>
           ))}
         </ul>
-        <InviteForm tripId={trip.id} />
+        {canInvite && <InviteForm tripId={trip.id} />}
       </section>
     </main>
   )

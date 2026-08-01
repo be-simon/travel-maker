@@ -33,7 +33,10 @@ export async function createTrip(input: {
     .select()
     .single()
 
-  if (error) return { error: error.message }
+  if (error) {
+    console.error('createTrip failed:', error)
+    return { error: '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.' }
+  }
 
   revalidatePath('/home')
   redirect(`/trips/${trip.id}`)
@@ -53,7 +56,8 @@ export async function inviteMember(tripId: number, email: string): Promise<Actio
 
   if (error) {
     if (error.code === '23505') return { error: '이미 초대된 이메일입니다.' }
-    return { error: error.message }
+    console.error('inviteMember failed:', error)
+    return { error: '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.' }
   }
 
   revalidatePath(`/trips/${tripId}`)
@@ -63,7 +67,10 @@ export async function inviteMember(tripId: number, email: string): Promise<Actio
 export async function acceptInvite(tripId: number): Promise<ActionResult> {
   const supabase = await createClient()
   const { error } = await supabase.rpc('accept_trip_invite', { p_trip_id: tripId })
-  if (error) return { error: error.message }
+  if (error) {
+    console.error('acceptInvite failed:', error)
+    return { error: '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.' }
+  }
   revalidatePath('/home')
   return { error: null }
 }
