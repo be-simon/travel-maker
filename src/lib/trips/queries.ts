@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import type { Trip, TripMember } from '@/types/database'
 
@@ -23,12 +24,12 @@ export async function listPendingInvites(): Promise<(TripMember & { trip: Trip |
   return data as unknown as (TripMember & { trip: Trip | null })[]
 }
 
-export async function getTrip(tripId: number): Promise<Trip | null> {
+export const getTrip = cache(async (tripId: number): Promise<Trip | null> => {
   const supabase = await createClient()
   const { data, error } = await supabase.from('trips').select('*').eq('id', tripId).maybeSingle()
   if (error) throw error
   return data
-}
+})
 
 export async function listTripMembers(tripId: number): Promise<TripMember[]> {
   const supabase = await createClient()
