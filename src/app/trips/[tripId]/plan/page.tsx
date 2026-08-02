@@ -25,7 +25,13 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
         <SpotPanel tripId={numericTripId} spots={spots} groups={groups} />
       </aside>
       <section className="flex-1">
-        <TimelineView startDate={trip.start_date} endDate={trip.end_date} blocks={blocks} spots={spots} />
+        <TimelineView
+          tripId={numericTripId}
+          startDate={trip.start_date}
+          endDate={trip.end_date}
+          blocks={blocks}
+          spots={spots}
+        />
       </section>
     </div>
   )
