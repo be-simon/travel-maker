@@ -42,10 +42,19 @@ export function useAutocompleteSuggestions(
     }
 
     setIsLoading(true)
-    AutocompleteSuggestion.fetchAutocompleteSuggestions(request).then((res) => {
-      setSuggestions(res.suggestions)
-      setIsLoading(false)
-    })
+    AutocompleteSuggestion.fetchAutocompleteSuggestions(request)
+      .then((res) => {
+        setSuggestions(res.suggestions)
+        setIsLoading(false)
+      })
+      .catch((error) => {
+        // 잘못 설정된(리퍼러 제한 등) API 키, 쿼터 초과, 네트워크 장애 등으로
+        // 실패할 수 있다 — catch 없이는 unhandled rejection이 되고 isLoading이
+        // 영원히 true로 남아 UI가 회복되지 않는다.
+        console.error('fetchAutocompleteSuggestions failed:', error)
+        setSuggestions([])
+        setIsLoading(false)
+      })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [placesLib, inputString])
 

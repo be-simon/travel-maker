@@ -91,7 +91,17 @@ export function AddSpotDialog({
   const selectSuggestion = async (suggestion: google.maps.places.AutocompleteSuggestion) => {
     if (!suggestion.placePrediction) return
     const place = suggestion.placePrediction.toPlace()
-    await place.fetchFields({ fields: ['displayName', 'formattedAddress', 'location'] })
+    try {
+      await place.fetchFields({ fields: ['displayName', 'formattedAddress', 'location'] })
+    } catch (error) {
+      // 리퍼러 제한된(또는 아직 설정 중인) API 키, 쿼터 초과, 네트워크 장애
+      // 등으로 실패할 수 있다 — 여기서 실패하면 폼 필드는 절대 건드리지 않고
+      // (이전 입력이 그대로 유지됨) 사용자가 직접 입력하거나 다시 시도할 수
+      // 있게 한다.
+      console.error('selectSuggestion failed:', error)
+      setError('장소 정보를 불러오지 못했습니다. 다시 시도해 주세요.')
+      return
+    }
 
     setName(place.displayName ?? '')
     setAddress(place.formattedAddress ?? null)
