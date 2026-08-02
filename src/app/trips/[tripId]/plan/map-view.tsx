@@ -1,11 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { Map, Marker, useMap } from '@vis.gl/react-google-maps'
+import { Map, Marker, useMap, InfoWindow } from '@vis.gl/react-google-maps'
 import type { PlanBlock, Spot, SpotCategory, SpotGroup } from '@/types/database'
 import { MapProvider } from '@/components/map/map-provider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
 import { enumerateDates } from './timeline-view'
+import { BlockDialog, type BlockDraft } from './block-dialog'
 
 // 좌표가 있는 스팟이 하나도 없을 때(빈 트립)의 기본 중심점 — 서울시청.
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 }
@@ -42,7 +44,13 @@ function spotIdsScheduledOnDate(blocks: PlanBlock[], date: string): Set<number> 
 // 않는다. useMap()이 null을 반환하는 동안(로드 전)에는 아무것도 렌더링하지
 // 않고, 실제 지도 인스턴스가 생긴 뒤에만(=SDK가 로드된 뒤에만) 마커를 그려서
 // "google is not defined" 런타임 에러를 피한다.
-function SpotMarkers({ spots }: { spots: LocatedSpot[] }) {
+function SpotMarkers({
+  spots,
+  onMarkerClick,
+}: {
+  spots: LocatedSpot[]
+  onMarkerClick: (spot: LocatedSpot) => void
+}) {
   const map = useMap()
   if (!map) return null
 
@@ -62,6 +70,7 @@ function SpotMarkers({ spots }: { spots: LocatedSpot[] }) {
               strokeColor: '#ffffff',
               strokeWeight: spot.priority ? 3 : 2,
             }}
+            onClick={() => onMarkerClick(spot)}
           />
         )
       })}
@@ -86,6 +95,23 @@ export function MapView({
   const [dateFilter, setDateFilter] = useState<string>('all')
   const [groupFilter, setGroupFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+
+  const [selectedSpot, setSelectedSpot] = useState<LocatedSpot | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
+  const [draft, setDraft] = useState<BlockDraft | null>(null)
+
+  const openAddToScheduleDialog = () => {
+    if (!selectedSpot) return
+    setDraft({
+      tripId: selectedSpot.trip_id,
+      date: startDate,
+      startTime: '09:00',
+      endTime: '10:00',
+      spotId: selectedSpot.id,
+    })
+    setDialogOpen(true)
+    setSelectedSpot(null)
+  }
 
   const scheduledOnDate = dateFilter === 'all' ? null : spotIdsScheduledOnDate(blocks, dateFilter)
 
@@ -123,70 +149,97 @@ export function MapView({
   ]
 
   return (
-    <MapProvider>
-      <div className="mb-3 flex flex-wrap gap-2">
-        <Select items={dateItems} value={dateFilter} onValueChange={(value) => setDateFilter(value ?? 'all')}>
-          <SelectTrigger size="sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 날짜</SelectItem>
-            {enumerateDates(startDate, endDate).map((date) => (
-              <SelectItem key={date} value={date}>
-                {date}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+    <>
+      <MapProvider>
+        <div className="mb-3 flex flex-wrap gap-2">
+          <Select items={dateItems} value={dateFilter} onValueChange={(value) => setDateFilter(value ?? 'all')}>
+            <SelectTrigger size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 날짜</SelectItem>
+              {enumerateDates(startDate, endDate).map((date) => (
+                <SelectItem key={date} value={date}>
+                  {date}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        <Select items={groupItems} value={groupFilter} onValueChange={(value) => setGroupFilter(value ?? 'all')}>
-          <SelectTrigger size="sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 도시</SelectItem>
-            {groups.map((group) => (
-              <SelectItem key={group.id} value={String(group.id)}>
-                {group.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Select items={groupItems} value={groupFilter} onValueChange={(value) => setGroupFilter(value ?? 'all')}>
+            <SelectTrigger size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 도시</SelectItem>
+              {groups.map((group) => (
+                <SelectItem key={group.id} value={String(group.id)}>
+                  {group.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        <Select
-          items={categoryItems}
-          value={categoryFilter}
-          onValueChange={(value) => setCategoryFilter(value ?? 'all')}
-        >
-          <SelectTrigger size="sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">전체 카테고리</SelectItem>
-            {(Object.entries(CATEGORY_LABELS) as [SpotCategory, string][]).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+          <Select
+            items={categoryItems}
+            value={categoryFilter}
+            onValueChange={(value) => setCategoryFilter(value ?? 'all')}
+          >
+            <SelectTrigger size="sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체 카테고리</SelectItem>
+              {(Object.entries(CATEGORY_LABELS) as [SpotCategory, string][]).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <div className="h-[600px] w-full overflow-hidden rounded-lg border">
-        <Map
-          defaultCenter={center}
-          defaultZoom={located.length > 0 ? 12 : 10}
-          gestureHandling="greedy"
-          mapId={undefined}
-        >
-          <SpotMarkers spots={located} />
-        </Map>
-      </div>
-      {filtered.length > 0 && located.length === 0 && (
-        <p className="mt-2 text-sm text-muted-foreground">
-          좌표가 있는 장소가 없습니다. 장소를 추가할 때 검색 결과에서 선택하면 지도에 표시됩니다.
-        </p>
-      )}
-    </MapProvider>
+        <div className="h-[600px] w-full overflow-hidden rounded-lg border">
+          <Map
+            defaultCenter={center}
+            defaultZoom={located.length > 0 ? 12 : 10}
+            gestureHandling="greedy"
+            mapId={undefined}
+          >
+            <SpotMarkers spots={located} onMarkerClick={setSelectedSpot} />
+            {selectedSpot && (
+              <InfoWindow
+                position={{ lat: selectedSpot.lat, lng: selectedSpot.lng }}
+                onCloseClick={() => setSelectedSpot(null)}
+              >
+                <div className="space-y-1 p-1 text-sm">
+                  <p className="font-medium">{selectedSpot.name}</p>
+                  <p className="text-xs text-muted-foreground">{CATEGORY_LABELS[selectedSpot.category]}</p>
+                  {selectedSpot.address && <p className="text-xs text-muted-foreground">{selectedSpot.address}</p>}
+                  {selectedSpot.memo && <p className="text-xs">{selectedSpot.memo}</p>}
+                  <Button size="sm" onClick={openAddToScheduleDialog}>
+                    일정에 추가
+                  </Button>
+                </div>
+              </InfoWindow>
+            )}
+          </Map>
+        </div>
+        {filtered.length > 0 && located.length === 0 && (
+          <p className="mt-2 text-sm text-muted-foreground">
+            좌표가 있는 장소가 없습니다. 장소를 추가할 때 검색 결과에서 선택하면 지도에 표시됩니다.
+          </p>
+        )}
+      </MapProvider>
+      <BlockDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        draft={draft}
+        editingBlock={null}
+        spots={spots}
+        tripStartDate={startDate}
+        tripEndDate={endDate}
+      />
+    </>
   )
 }
