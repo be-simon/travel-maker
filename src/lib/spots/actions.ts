@@ -16,6 +16,10 @@ export async function createSpot(input: {
   memo: string
   groupId: number | null
   newGroupName: string
+  placeId: string | null
+  lat: number | null
+  lng: number | null
+  address: string | null
 }): Promise<ActionResult> {
   const nameError = validateSpotName(input.name)
   if (nameError) return { error: nameError }
@@ -44,6 +48,10 @@ export async function createSpot(input: {
     category: input.category,
     memo: input.memo.trim() || null,
     status: 'candidate',
+    place_id: input.placeId,
+    lat: input.lat,
+    lng: input.lng,
+    address: input.address,
   })
 
   if (error) {

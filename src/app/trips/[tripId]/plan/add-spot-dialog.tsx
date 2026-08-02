@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { createSpot } from '@/lib/spots/actions'
+import { useAutocompleteSuggestions } from '@/lib/places/use-autocomplete-suggestions'
 import type { SpotCategory, SpotGroup } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,6 +37,11 @@ export function AddSpotDialog({
   const [memo, setMemo] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const [placeId, setPlaceId] = useState<string | null>(null)
+  const [lat, setLat] = useState<number | null>(null)
+  const [lng, setLng] = useState<number | null>(null)
+  const [address, setAddress] = useState<string | null>(null)
+  const { suggestions, resetSession } = useAutocompleteSuggestions(name)
 
   const groupItems = [
     { value: 'new', label: '+ 새 그룹' },
@@ -49,6 +55,11 @@ export function AddSpotDialog({
     setNewGroupName('')
     setMemo('')
     setError(null)
+    setPlaceId(null)
+    setLat(null)
+    setLng(null)
+    setAddress(null)
+    resetSession()
   }
 
   // 다이얼로그를 제출 없이 닫았다가(X 버튼/Escape/배경 클릭) 다시 열면 이전
@@ -64,9 +75,33 @@ export function AddSpotDialog({
       setNewGroupName('')
       setMemo('')
       setError(null)
+      setPlaceId(null)
+      setLat(null)
+      setLng(null)
+      setAddress(null)
+      resetSession()
     }
+    // resetSession is intentionally omitted: it's a new function identity on
+    // every render (not memoized), so including it would re-run this effect
+    // every render instead of only when the dialog opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  const selectSuggestion = async (suggestion: google.maps.places.AutocompleteSuggestion) => {
+    if (!suggestion.placePrediction) return
+    const place = suggestion.placePrediction.toPlace()
+    await place.fetchFields({ fields: ['displayName', 'formattedAddress', 'location'] })
+
+    setName(place.displayName ?? '')
+    setAddress(place.formattedAddress ?? null)
+    // place.location is a google.maps.LatLng object (methods, not plain
+    // {lat, lng} properties) — calling .lat()/.lng() is required here.
+    setLat(place.location ? place.location.lat() : null)
+    setLng(place.location ? place.location.lng() : null)
+    setPlaceId(suggestion.placePrediction.placeId)
+    resetSession()
+  }
 
   const submit = () => {
     startTransition(async () => {
@@ -77,6 +112,10 @@ export function AddSpotDialog({
         memo,
         groupId: groupId === 'new' ? null : Number(groupId),
         newGroupName: groupId === 'new' ? newGroupName : '',
+        placeId,
+        lat,
+        lng,
+        address,
       })
       if (result.error) {
         setError(result.error)
@@ -96,7 +135,31 @@ export function AddSpotDialog({
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-sm font-medium">이름</label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="예: 두오모" />
+            <Input
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value)
+                setPlaceId(null)
+                setLat(null)
+                setLng(null)
+                setAddress(null)
+              }}
+              placeholder="예: 두오모 (검색해서 선택하면 지도에 표시됩니다)"
+            />
+            {suggestions.length > 0 && (
+              <ul className="mt-1 max-h-48 overflow-y-auto rounded-md border text-sm">
+                {suggestions.map((suggestion, index) => (
+                  <li
+                    key={index}
+                    className="cursor-pointer px-2 py-1.5 hover:bg-accent"
+                    onClick={() => selectSuggestion(suggestion)}
+                  >
+                    {suggestion.placePrediction?.text.text}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {address && <p className="mt-1 text-xs text-muted-foreground">{address}</p>}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">카테고리</label>
