@@ -3,7 +3,7 @@ import { getTrip } from '@/lib/trips/queries'
 import { listSpotsByTrip, listSpotGroupsByTrip } from '@/lib/spots/queries'
 import { listBlocksByTrip } from '@/lib/plan-blocks/queries'
 import { SpotPanel } from './spot-panel'
-import { TimelineView } from './timeline-view'
+import { PlanCanvas } from './plan-canvas'
 
 export default async function PlanPage({ params }: { params: Promise<{ tripId: string }> }) {
   const { tripId } = await params
@@ -25,7 +25,7 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
         <SpotPanel tripId={numericTripId} spots={spots} groups={groups} />
       </aside>
       <section className="flex-1">
-        <TimelineView
+        <PlanCanvas
           tripId={numericTripId}
           startDate={trip.start_date}
           endDate={trip.end_date}
