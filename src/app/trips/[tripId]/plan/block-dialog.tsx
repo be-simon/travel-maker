@@ -33,12 +33,16 @@ export function BlockDialog({
   draft,
   editingBlock,
   spots,
+  tripStartDate,
+  tripEndDate,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   draft: BlockDraft | null
   editingBlock: PlanBlock | null
   spots: Spot[]
+  tripStartDate: string
+  tripEndDate: string
 }) {
   const [title, setTitle] = useState('')
   const [type, setType] = useState<BlockType>('spot')
@@ -106,6 +110,8 @@ export function BlockDialog({
         spotId: type === 'spot' && spotId !== 'none' ? Number(spotId) : null,
         title,
         memo,
+        tripStartDate,
+        tripEndDate,
       }
 
       const result = editingBlock
@@ -186,7 +192,13 @@ export function BlockDialog({
           )}
           <div>
             <label className="mb-1 block text-sm font-medium">날짜</label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <Input
+              type="date"
+              value={date}
+              min={tripStartDate}
+              max={tripEndDate}
+              onChange={(e) => setDate(e.target.value)}
+            />
           </div>
           <div className="flex gap-3">
             <div className="flex-1">

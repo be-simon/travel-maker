@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
-import { validateBlockTimes, validateBlockTitle } from './validation'
+import { validateBlockDate, validateBlockTimes, validateBlockTitle } from './validation'
 import type { BlockType } from '@/types/database'
 
 export interface ActionResult {
@@ -18,6 +18,8 @@ export interface BlockInput {
   spotId: number | null
   title: string
   memo: string
+  tripStartDate: string
+  tripEndDate: string
 }
 
 export async function createBlock(input: BlockInput): Promise<ActionResult> {
@@ -25,6 +27,8 @@ export async function createBlock(input: BlockInput): Promise<ActionResult> {
   if (titleError) return { error: titleError }
   const timeError = validateBlockTimes(input.startTime, input.endTime)
   if (timeError) return { error: timeError }
+  const dateError = validateBlockDate(input.date, input.tripStartDate, input.tripEndDate)
+  if (dateError) return { error: dateError }
 
   const supabase = await createClient()
   const { error } = await supabase.from('plan_blocks').insert({
@@ -68,6 +72,8 @@ export async function updateBlock(
   if (titleError) return { error: titleError }
   const timeError = validateBlockTimes(input.startTime, input.endTime)
   if (timeError) return { error: timeError }
+  const dateError = validateBlockDate(input.date, input.tripStartDate, input.tripEndDate)
+  if (dateError) return { error: dateError }
 
   const supabase = await createClient()
   const { error } = await supabase

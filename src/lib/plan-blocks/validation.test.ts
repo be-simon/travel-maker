@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateBlockTitle, validateBlockTimes } from './validation'
+import { validateBlockTitle, validateBlockTimes, validateBlockDate } from './validation'
 
 describe('validateBlockTitle', () => {
   it('rejects an empty title', () => {
@@ -23,5 +23,28 @@ describe('validateBlockTimes', () => {
 
   it('accepts a valid range', () => {
     expect(validateBlockTimes('09:00:00', '10:30:00')).toBeNull()
+  })
+})
+
+describe('validateBlockDate', () => {
+  it('accepts a date within the trip range', () => {
+    expect(validateBlockDate('2026-06-02', '2026-06-01', '2026-06-05')).toBeNull()
+  })
+
+  it('rejects a date before the trip start date', () => {
+    expect(validateBlockDate('2026-05-31', '2026-06-01', '2026-06-05')).toBe(
+      '날짜는 여행 기간 안에서 선택해 주세요.'
+    )
+  })
+
+  it('rejects a date after the trip end date', () => {
+    expect(validateBlockDate('2026-06-06', '2026-06-01', '2026-06-05')).toBe(
+      '날짜는 여행 기간 안에서 선택해 주세요.'
+    )
+  })
+
+  it('accepts the trip start and end dates as boundaries', () => {
+    expect(validateBlockDate('2026-06-01', '2026-06-01', '2026-06-05')).toBeNull()
+    expect(validateBlockDate('2026-06-05', '2026-06-01', '2026-06-05')).toBeNull()
   })
 })

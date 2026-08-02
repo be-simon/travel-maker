@@ -186,6 +186,8 @@ export function TimelineView({
         draft={draft}
         editingBlock={editingBlock}
         spots={spots}
+        tripStartDate={startDate}
+        tripEndDate={endDate}
       />
     </>
   )
