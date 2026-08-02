@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Map, Marker, useMap, InfoWindow, Polyline } from '@vis.gl/react-google-maps'
 import type { PlanBlock, Spot, SpotCategory, SpotGroup } from '@/types/database'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -35,7 +35,7 @@ function isLocated(spot: Spot): spot is LocatedSpot {
   return spot.lat !== null && spot.lng !== null
 }
 
-function spotIdsScheduledOnDate(blocks: PlanBlock[], date: string): Set<number> {
+export function spotIdsScheduledOnDate(blocks: PlanBlock[], date: string): Set<number> {
   const ids = new Set<number>()
   for (const block of blocks) {
     if (block.date === date && block.type === 'spot' && block.spot_id !== null) {
@@ -50,7 +50,7 @@ interface RouteStop {
   sequence: number
 }
 
-function buildRouteForDate(blocks: PlanBlock[], spots: LocatedSpot[], date: string): RouteStop[] {
+export function buildRouteForDate(blocks: PlanBlock[], spots: LocatedSpot[], date: string): RouteStop[] {
   // 이 파일은 '@vis.gl/react-google-maps'의 `Map` 컴포넌트를 값으로 import해서
   // 지역 스코프의 `Map` 식별자를 가린다 — 전역 Map 생성자를 쓰려면
   // globalThis.Map으로 명시해야 한다(그냥 `new Map(...)`은 컴포넌트를
@@ -107,7 +107,13 @@ function SpotMarkers({
 // 순수 {lat, lng} 리터럴이라 이 컴포넌트 자체는 게이트가 엄밀히 필요하진
 // 않지만, "Maps SDK 백엔드 컴포넌트를 그려도 안전한가"의 일관된 가드로
 // SpotMarkers와 동일하게 적용한다.
-function RouteOverlay({ route }: { route: RouteStop[] }) {
+function RouteOverlay({
+  route,
+  onMarkerClick,
+}: {
+  route: RouteStop[]
+  onMarkerClick: (spot: LocatedSpot) => void
+}) {
   const map = useMap()
   if (!map || route.length === 0) return null
 
@@ -121,7 +127,7 @@ function RouteOverlay({ route }: { route: RouteStop[] }) {
       />
       {route.map(({ spot, sequence }) => (
         <Marker
-          key={`route-${spot.id}`}
+          key={`route-${spot.id}-${sequence}`}
           position={{ lat: spot.lat, lng: spot.lng }}
           label={{ text: String(sequence), color: '#ffffff', fontWeight: 'bold' }}
           icon={{
@@ -132,6 +138,7 @@ function RouteOverlay({ route }: { route: RouteStop[] }) {
             strokeColor: '#ffffff',
             strokeWeight: 2,
           }}
+          onClick={() => onMarkerClick(spot)}
         />
       ))}
     </>
@@ -160,6 +167,15 @@ export function MapView({
   const [dialogOpen, setDialogOpen] = useState(false)
   const [draft, setDraft] = useState<BlockDraft | null>(null)
 
+  // 필터가 바뀌면 이전에 열려 있던 InfoWindow가 더 이상 필터 결과에 포함되지
+  // 않는 스팟을 계속 보여줄 수 있다(예: 날짜 필터를 바꿔서 해당 스팟이 더 이상
+  // 그 날의 일정이 아니게 됨) — 세 필터 중 하나라도 바뀌면 선택을 초기화한다.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    setSelectedSpot(null)
+  }, [dateFilter, groupFilter, categoryFilter])
+  /* eslint-enable react-hooks/set-state-in-effect */
+
   // 모든 훅 호출(useState) 다음에 체크한다 — Rules of Hooks는 훅 호출 뒤에
   // 오는 조건부 early return은 허용한다(이후에 더 이상 훅을 호출하지 않는
   // 한). API_KEY는 모듈 로드 시 한 번 고정되는 상수라 이 컴포넌트 인스턴스는
@@ -178,10 +194,11 @@ export function MapView({
     if (!selectedSpot) return
     setDraft({
       tripId: selectedSpot.trip_id,
-      date: startDate,
+      date: dateFilter !== 'all' ? dateFilter : startDate,
       startTime: '09:00',
       endTime: '10:00',
       spotId: selectedSpot.id,
+      title: selectedSpot.name,
     })
     setDialogOpen(true)
     setSelectedSpot(null)
@@ -281,7 +298,7 @@ export function MapView({
           mapId={undefined}
         >
           <SpotMarkers spots={located} onMarkerClick={setSelectedSpot} />
-          <RouteOverlay route={route} />
+          <RouteOverlay route={route} onMarkerClick={setSelectedSpot} />
           {selectedSpot && (
             <InfoWindow
               position={{ lat: selectedSpot.lat, lng: selectedSpot.lng }}

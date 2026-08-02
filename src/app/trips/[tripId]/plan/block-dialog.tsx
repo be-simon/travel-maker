@@ -22,6 +22,7 @@ export interface BlockDraft {
   startTime: string
   endTime: string
   spotId?: number
+  title?: string
 }
 
 function toDbTime(value: string): string {
@@ -80,7 +81,7 @@ export function BlockDialog({
       setEndTime(editingBlock.end_time.slice(0, 5))
       setMemo(editingBlock.memo ?? '')
     } else if (draft) {
-      setTitle('')
+      setTitle(draft.title ?? '')
       setType('spot')
       setSpotId(draft.spotId ? String(draft.spotId) : 'none')
       setDate(draft.date)
