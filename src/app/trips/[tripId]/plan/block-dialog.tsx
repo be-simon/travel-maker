@@ -90,6 +90,11 @@ export function BlockDialog({
   const tripId = editingBlock?.trip_id ?? draft?.tripId
   if (!tripId) return null
 
+  const spotItems = [
+    { value: 'none', label: '연결 안 함' },
+    ...spots.map((spot) => ({ value: String(spot.id), label: spot.name })),
+  ]
+
   const submit = () => {
     startTransition(async () => {
       const input = {
@@ -140,7 +145,11 @@ export function BlockDialog({
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">유형</label>
-            <Select value={type} onValueChange={(value) => setType(value as BlockType)}>
+            <Select
+              items={TYPE_OPTIONS}
+              value={type}
+              onValueChange={(value) => setType(value as BlockType)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -156,7 +165,11 @@ export function BlockDialog({
           {type === 'spot' && (
             <div>
               <label className="mb-1 block text-sm font-medium">장소</label>
-              <Select value={spotId} onValueChange={(value) => setSpotId(value ?? 'none')}>
+              <Select
+                items={spotItems}
+                value={spotId}
+                onValueChange={(value) => setSpotId(value ?? 'none')}
+              >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

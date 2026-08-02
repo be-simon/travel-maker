@@ -37,6 +37,11 @@ export function AddSpotDialog({
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
 
+  const groupItems = [
+    { value: 'new', label: '+ 새 그룹' },
+    ...groups.map((group) => ({ value: String(group.id), label: group.name })),
+  ]
+
   const reset = () => {
     setName('')
     setCategory('sight')
@@ -78,7 +83,11 @@ export function AddSpotDialog({
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">카테고리</label>
-            <Select value={category} onValueChange={(value) => setCategory(value as SpotCategory)}>
+            <Select
+              items={CATEGORY_OPTIONS}
+              value={category}
+              onValueChange={(value) => setCategory(value as SpotCategory)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -93,7 +102,11 @@ export function AddSpotDialog({
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium">도시/지역</label>
-            <Select value={groupId} onValueChange={(value) => setGroupId(value ?? 'new')}>
+            <Select
+              items={groupItems}
+              value={groupId}
+              onValueChange={(value) => setGroupId(value ?? 'new')}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
