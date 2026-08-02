@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Map, Marker, useMap, InfoWindow } from '@vis.gl/react-google-maps'
+import { Map, Marker, useMap, InfoWindow, Polyline } from '@vis.gl/react-google-maps'
 import type { PlanBlock, Spot, SpotCategory, SpotGroup } from '@/types/database'
 import { MapProvider } from '@/components/map/map-provider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -40,6 +40,25 @@ function spotIdsScheduledOnDate(blocks: PlanBlock[], date: string): Set<number> 
   return ids
 }
 
+interface RouteStop {
+  spot: LocatedSpot
+  sequence: number
+}
+
+function buildRouteForDate(blocks: PlanBlock[], spots: LocatedSpot[], date: string): RouteStop[] {
+  // 이 파일은 '@vis.gl/react-google-maps'의 `Map` 컴포넌트를 값으로 import해서
+  // 지역 스코프의 `Map` 식별자를 가린다 — 전역 Map 생성자를 쓰려면
+  // globalThis.Map으로 명시해야 한다(그냥 `new Map(...)`은 컴포넌트를
+  // 생성자로 오인해 타입 에러가 난다).
+  const spotById = new globalThis.Map(spots.map((spot) => [spot.id, spot]))
+  return blocks
+    .filter((block) => block.date === date && block.type === 'spot' && block.spot_id !== null)
+    .sort((a, b) => a.start_time.localeCompare(b.start_time))
+    .map((block) => spotById.get(block.spot_id!))
+    .filter((spot): spot is LocatedSpot => spot !== undefined)
+    .map((spot, index) => ({ spot, sequence: index + 1 }))
+}
+
 // google.maps.* 상수(SymbolPath 등)는 지도 SDK 로드가 끝나기 전까지 존재하지
 // 않는다. useMap()이 null을 반환하는 동안(로드 전)에는 아무것도 렌더링하지
 // 않고, 실제 지도 인스턴스가 생긴 뒤에만(=SDK가 로드된 뒤에만) 마커를 그려서
@@ -74,6 +93,42 @@ function SpotMarkers({
           />
         )
       })}
+    </>
+  )
+}
+
+// SpotMarkers와 동일한 이유(useMap()이 null인 동안엔 google.maps.* SDK가 아직
+// 로드되지 않았을 수 있다)로 같은 게이팅 패턴을 적용한다. Polyline의 path는
+// 순수 {lat, lng} 리터럴이라 이 컴포넌트 자체는 게이트가 엄밀히 필요하진
+// 않지만, "Maps SDK 백엔드 컴포넌트를 그려도 안전한가"의 일관된 가드로
+// SpotMarkers와 동일하게 적용한다.
+function RouteOverlay({ route }: { route: RouteStop[] }) {
+  const map = useMap()
+  if (!map || route.length === 0) return null
+
+  return (
+    <>
+      <Polyline
+        path={route.map(({ spot }) => ({ lat: spot.lat, lng: spot.lng }))}
+        strokeColor="#2563eb"
+        strokeOpacity={0.8}
+        strokeWeight={3}
+      />
+      {route.map(({ spot, sequence }) => (
+        <Marker
+          key={`route-${spot.id}`}
+          position={{ lat: spot.lat, lng: spot.lng }}
+          label={{ text: String(sequence), color: '#ffffff', fontWeight: 'bold' }}
+          icon={{
+            path: google.maps.SymbolPath.CIRCLE,
+            scale: 12,
+            fillColor: '#2563eb',
+            fillOpacity: 1,
+            strokeColor: '#ffffff',
+            strokeWeight: 2,
+          }}
+        />
+      ))}
     </>
   )
 }
@@ -127,6 +182,7 @@ export function MapView({
 
   const located = filtered.filter(isLocated)
   const center = located.length > 0 ? { lat: located[0].lat, lng: located[0].lng } : DEFAULT_CENTER
+  const route = dateFilter === 'all' ? [] : buildRouteForDate(blocks, located, dateFilter)
 
   // Select(Base UI)는 닫힌 트리거에 선택된 라벨을 보여주려면 items 배열이
   // 필요하다 — 없으면 SelectItem의 children이 아니라 원시 value 문자열을
@@ -207,6 +263,7 @@ export function MapView({
             mapId={undefined}
           >
             <SpotMarkers spots={located} onMarkerClick={setSelectedSpot} />
+            <RouteOverlay route={route} />
             {selectedSpot && (
               <InfoWindow
                 position={{ lat: selectedSpot.lat, lng: selectedSpot.lng }}
