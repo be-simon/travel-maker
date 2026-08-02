@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { PlanBlock, Spot } from '@/types/database'
+import type { PlanBlock, Spot, SpotGroup } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { TimelineView } from './timeline-view'
 import { MapView } from './map-view'
@@ -14,12 +14,14 @@ export function PlanCanvas({
   endDate,
   blocks,
   spots,
+  groups,
 }: {
   tripId: number
   startDate: string
   endDate: string
   blocks: PlanBlock[]
   spots: Spot[]
+  groups: SpotGroup[]
 }) {
   const [mode, setMode] = useState<CanvasMode>('timeline')
 
@@ -40,7 +42,14 @@ export function PlanCanvas({
       {mode === 'timeline' ? (
         <TimelineView tripId={tripId} startDate={startDate} endDate={endDate} blocks={blocks} spots={spots} />
       ) : (
-        <MapView tripId={tripId} startDate={startDate} endDate={endDate} blocks={blocks} spots={spots} />
+        <MapView
+          tripId={tripId}
+          startDate={startDate}
+          endDate={endDate}
+          blocks={blocks}
+          spots={spots}
+          groups={groups}
+        />
       )}
     </div>
   )

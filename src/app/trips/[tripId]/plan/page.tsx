@@ -31,6 +31,7 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
           endDate={trip.end_date}
           blocks={blocks}
           spots={spots}
+          groups={groups}
         />
       </section>
     </div>

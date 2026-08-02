@@ -1,11 +1,23 @@
 'use client'
 
+import { useState } from 'react'
 import { Map, Marker, useMap } from '@vis.gl/react-google-maps'
-import type { PlanBlock, Spot } from '@/types/database'
+import type { PlanBlock, Spot, SpotCategory, SpotGroup } from '@/types/database'
 import { MapProvider } from '@/components/map/map-provider'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { enumerateDates } from './timeline-view'
 
 // 좌표가 있는 스팟이 하나도 없을 때(빈 트립)의 기본 중심점 — 서울시청.
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 }
+
+const CATEGORY_LABELS: Record<SpotCategory, string> = {
+  sight: '관광',
+  restaurant: '식당',
+  cafe: '카페',
+  shopping: '쇼핑',
+  lodging: '숙소',
+  etc: '기타',
+}
 
 interface LocatedSpot extends Spot {
   lat: number
@@ -14,6 +26,16 @@ interface LocatedSpot extends Spot {
 
 function isLocated(spot: Spot): spot is LocatedSpot {
   return spot.lat !== null && spot.lng !== null
+}
+
+function spotIdsScheduledOnDate(blocks: PlanBlock[], date: string): Set<number> {
+  const ids = new Set<number>()
+  for (const block of blocks) {
+    if (block.date === date && block.type === 'spot' && block.spot_id !== null) {
+      ids.add(block.spot_id)
+    }
+  }
+  return ids
 }
 
 // google.maps.* 상수(SymbolPath 등)는 지도 SDK 로드가 끝나기 전까지 존재하지
@@ -48,19 +70,108 @@ function SpotMarkers({ spots }: { spots: LocatedSpot[] }) {
 }
 
 export function MapView({
+  startDate,
+  endDate,
+  blocks,
   spots,
+  groups,
 }: {
   tripId: number
   startDate: string
   endDate: string
   blocks: PlanBlock[]
   spots: Spot[]
+  groups: SpotGroup[]
 }) {
-  const located = spots.filter(isLocated)
+  const [dateFilter, setDateFilter] = useState<string>('all')
+  const [groupFilter, setGroupFilter] = useState<string>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+
+  const scheduledOnDate = dateFilter === 'all' ? null : spotIdsScheduledOnDate(blocks, dateFilter)
+
+  const filtered = spots.filter((spot) => {
+    if (groupFilter !== 'all' && String(spot.group_id) !== groupFilter) return false
+    if (categoryFilter !== 'all' && spot.category !== categoryFilter) return false
+    // 날짜 필터는 확정된(候補가 아닌) 스팟에만 적용한다 — 후보는 아직 날짜에
+    // 묶이지 않았으므로, 특정 날짜를 골라도 "이 날 근처에 가볼 만한 후보가
+    // 있는지"는 계속 보여줘야 한다.
+    if (scheduledOnDate && spot.status !== 'candidate' && !scheduledOnDate.has(spot.id)) return false
+    return true
+  })
+
+  const located = filtered.filter(isLocated)
   const center = located.length > 0 ? { lat: located[0].lat, lng: located[0].lng } : DEFAULT_CENTER
+
+  // Select(Base UI)는 닫힌 트리거에 선택된 라벨을 보여주려면 items 배열이
+  // 필요하다 — 없으면 SelectItem의 children이 아니라 원시 value 문자열을
+  // 그대로 보여준다(M2 플랜에서 add-spot-dialog.tsx/block-dialog.tsx에 적용한
+  // 것과 동일한 이유). 아래 세 필터 모두 "전체 ..." 옵션의 value가 'all'이라
+  // 그 자체로는 라벨과 다르고, 도시/카테고리 필터는 선택된 실제 항목의
+  // value(그룹 id/카테고리 코드)도 라벨(그룹 이름/한글 카테고리명)과 다르므로
+  // items 없이는 트리거가 'all'이나 원시 id/코드를 그대로 보여주는 버그가 난다.
+  const dateItems = [
+    { value: 'all', label: '전체 날짜' },
+    ...enumerateDates(startDate, endDate).map((date) => ({ value: date, label: date })),
+  ]
+  const groupItems = [
+    { value: 'all', label: '전체 도시' },
+    ...groups.map((group) => ({ value: String(group.id), label: group.name })),
+  ]
+  const categoryItems = [
+    { value: 'all', label: '전체 카테고리' },
+    ...(Object.entries(CATEGORY_LABELS) as [SpotCategory, string][]).map(([value, label]) => ({ value, label })),
+  ]
 
   return (
     <MapProvider>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <Select items={dateItems} value={dateFilter} onValueChange={(value) => setDateFilter(value ?? 'all')}>
+          <SelectTrigger size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 날짜</SelectItem>
+            {enumerateDates(startDate, endDate).map((date) => (
+              <SelectItem key={date} value={date}>
+                {date}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select items={groupItems} value={groupFilter} onValueChange={(value) => setGroupFilter(value ?? 'all')}>
+          <SelectTrigger size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 도시</SelectItem>
+            {groups.map((group) => (
+              <SelectItem key={group.id} value={String(group.id)}>
+                {group.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          items={categoryItems}
+          value={categoryFilter}
+          onValueChange={(value) => setCategoryFilter(value ?? 'all')}
+        >
+          <SelectTrigger size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 카테고리</SelectItem>
+            {(Object.entries(CATEGORY_LABELS) as [SpotCategory, string][]).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="h-[600px] w-full overflow-hidden rounded-lg border">
         <Map
           defaultCenter={center}
@@ -71,7 +182,7 @@ export function MapView({
           <SpotMarkers spots={located} />
         </Map>
       </div>
-      {spots.length > 0 && located.length === 0 && (
+      {filtered.length > 0 && located.length === 0 && (
         <p className="mt-2 text-sm text-muted-foreground">
           좌표가 있는 장소가 없습니다. 장소를 추가할 때 검색 결과에서 선택하면 지도에 표시됩니다.
         </p>
