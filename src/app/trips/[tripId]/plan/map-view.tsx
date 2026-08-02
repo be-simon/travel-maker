@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Map, Marker, useMap, InfoWindow, Polyline } from '@vis.gl/react-google-maps'
 import type { PlanBlock, Spot, SpotCategory, SpotGroup } from '@/types/database'
-import { MapProvider } from '@/components/map/map-provider'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { enumerateDates } from './timeline-view'
@@ -11,6 +10,12 @@ import { BlockDialog, type BlockDraft } from './block-dialog'
 
 // 좌표가 있는 스팟이 하나도 없을 때(빈 트립)의 기본 중심점 — 서울시청.
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 }
+
+// MapProvider는 이제 page.tsx에서 한 번만 감싸며(AddSpotDialog도 API 키 유무와
+// 무관하게 항상 렌더링돼야 하므로), 키가 없을 때 fallback을 보여주지 않는다.
+// 실제로 지도를 그려야 하는 이 컴포넌트가 키 유무를 직접 확인해서 fallback을
+// 책임진다.
+const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
 const CATEGORY_LABELS: Record<SpotCategory, string> = {
   sight: '관광',
@@ -155,6 +160,20 @@ export function MapView({
   const [dialogOpen, setDialogOpen] = useState(false)
   const [draft, setDraft] = useState<BlockDraft | null>(null)
 
+  // 모든 훅 호출(useState) 다음에 체크한다 — Rules of Hooks는 훅 호출 뒤에
+  // 오는 조건부 early return은 허용한다(이후에 더 이상 훅을 호출하지 않는
+  // 한). API_KEY는 모듈 로드 시 한 번 고정되는 상수라 이 컴포넌트 인스턴스는
+  // 리렌더마다 항상 같은 분기만 타므로 훅 호출 수도 안정적이다.
+  if (!API_KEY) {
+    return (
+      <div className="flex min-h-64 items-center justify-center rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+        지도를 표시하려면 Google Maps API 키가 필요합니다.
+        <br />
+        관리자가 NEXT_PUBLIC_GOOGLE_MAPS_API_KEY 환경 변수를 설정해야 합니다.
+      </div>
+    )
+  }
+
   const openAddToScheduleDialog = () => {
     if (!selectedSpot) return
     setDraft({
@@ -206,88 +225,86 @@ export function MapView({
 
   return (
     <>
-      <MapProvider>
-        <div className="mb-3 flex flex-wrap gap-2">
-          <Select items={dateItems} value={dateFilter} onValueChange={(value) => setDateFilter(value ?? 'all')}>
-            <SelectTrigger size="sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 날짜</SelectItem>
-              {enumerateDates(startDate, endDate).map((date) => (
-                <SelectItem key={date} value={date}>
-                  {date}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <Select items={dateItems} value={dateFilter} onValueChange={(value) => setDateFilter(value ?? 'all')}>
+          <SelectTrigger size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 날짜</SelectItem>
+            {enumerateDates(startDate, endDate).map((date) => (
+              <SelectItem key={date} value={date}>
+                {date}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <Select items={groupItems} value={groupFilter} onValueChange={(value) => setGroupFilter(value ?? 'all')}>
-            <SelectTrigger size="sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 도시</SelectItem>
-              {groups.map((group) => (
-                <SelectItem key={group.id} value={String(group.id)}>
-                  {group.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <Select items={groupItems} value={groupFilter} onValueChange={(value) => setGroupFilter(value ?? 'all')}>
+          <SelectTrigger size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 도시</SelectItem>
+            {groups.map((group) => (
+              <SelectItem key={group.id} value={String(group.id)}>
+                {group.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <Select
-            items={categoryItems}
-            value={categoryFilter}
-            onValueChange={(value) => setCategoryFilter(value ?? 'all')}
-          >
-            <SelectTrigger size="sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체 카테고리</SelectItem>
-              {(Object.entries(CATEGORY_LABELS) as [SpotCategory, string][]).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select
+          items={categoryItems}
+          value={categoryFilter}
+          onValueChange={(value) => setCategoryFilter(value ?? 'all')}
+        >
+          <SelectTrigger size="sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">전체 카테고리</SelectItem>
+            {(Object.entries(CATEGORY_LABELS) as [SpotCategory, string][]).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-        <div className="h-[600px] w-full overflow-hidden rounded-lg border">
-          <Map
-            defaultCenter={center}
-            defaultZoom={located.length > 0 ? 12 : 10}
-            gestureHandling="greedy"
-            mapId={undefined}
-          >
-            <SpotMarkers spots={located} onMarkerClick={setSelectedSpot} />
-            <RouteOverlay route={route} />
-            {selectedSpot && (
-              <InfoWindow
-                position={{ lat: selectedSpot.lat, lng: selectedSpot.lng }}
-                onCloseClick={() => setSelectedSpot(null)}
-              >
-                <div className="space-y-1 p-1 text-sm">
-                  <p className="font-medium">{selectedSpot.name}</p>
-                  <p className="text-xs text-muted-foreground">{CATEGORY_LABELS[selectedSpot.category]}</p>
-                  {selectedSpot.address && <p className="text-xs text-muted-foreground">{selectedSpot.address}</p>}
-                  {selectedSpot.memo && <p className="text-xs">{selectedSpot.memo}</p>}
-                  <Button size="sm" onClick={openAddToScheduleDialog}>
-                    일정에 추가
-                  </Button>
-                </div>
-              </InfoWindow>
-            )}
-          </Map>
-        </div>
-        {filtered.length > 0 && located.length === 0 && (
-          <p className="mt-2 text-sm text-muted-foreground">
-            좌표가 있는 장소가 없습니다. 장소를 추가할 때 검색 결과에서 선택하면 지도에 표시됩니다.
-          </p>
-        )}
-      </MapProvider>
+      <div className="h-[600px] w-full overflow-hidden rounded-lg border">
+        <Map
+          defaultCenter={center}
+          defaultZoom={located.length > 0 ? 12 : 10}
+          gestureHandling="greedy"
+          mapId={undefined}
+        >
+          <SpotMarkers spots={located} onMarkerClick={setSelectedSpot} />
+          <RouteOverlay route={route} />
+          {selectedSpot && (
+            <InfoWindow
+              position={{ lat: selectedSpot.lat, lng: selectedSpot.lng }}
+              onCloseClick={() => setSelectedSpot(null)}
+            >
+              <div className="space-y-1 p-1 text-sm">
+                <p className="font-medium">{selectedSpot.name}</p>
+                <p className="text-xs text-muted-foreground">{CATEGORY_LABELS[selectedSpot.category]}</p>
+                {selectedSpot.address && <p className="text-xs text-muted-foreground">{selectedSpot.address}</p>}
+                {selectedSpot.memo && <p className="text-xs">{selectedSpot.memo}</p>}
+                <Button size="sm" onClick={openAddToScheduleDialog}>
+                  일정에 추가
+                </Button>
+              </div>
+            </InfoWindow>
+          )}
+        </Map>
+      </div>
+      {filtered.length > 0 && located.length === 0 && (
+        <p className="mt-2 text-sm text-muted-foreground">
+          좌표가 있는 장소가 없습니다. 장소를 추가할 때 검색 결과에서 선택하면 지도에 표시됩니다.
+        </p>
+      )}
       <BlockDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}

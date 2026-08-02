@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { getTrip } from '@/lib/trips/queries'
 import { listSpotsByTrip, listSpotGroupsByTrip } from '@/lib/spots/queries'
 import { listBlocksByTrip } from '@/lib/plan-blocks/queries'
+import { MapProvider } from '@/components/map/map-provider'
 import { SpotPanel } from './spot-panel'
 import { PlanCanvas } from './plan-canvas'
 
@@ -20,20 +21,22 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
   ])
 
   return (
-    <div className="flex gap-6">
-      <aside className="w-72 shrink-0">
-        <SpotPanel tripId={numericTripId} spots={spots} groups={groups} />
-      </aside>
-      <section className="flex-1">
-        <PlanCanvas
-          tripId={numericTripId}
-          startDate={trip.start_date}
-          endDate={trip.end_date}
-          blocks={blocks}
-          spots={spots}
-          groups={groups}
-        />
-      </section>
-    </div>
+    <MapProvider>
+      <div className="flex gap-6">
+        <aside className="w-72 shrink-0">
+          <SpotPanel tripId={numericTripId} spots={spots} groups={groups} />
+        </aside>
+        <section className="flex-1">
+          <PlanCanvas
+            tripId={numericTripId}
+            startDate={trip.start_date}
+            endDate={trip.end_date}
+            blocks={blocks}
+            spots={spots}
+            groups={groups}
+          />
+        </section>
+      </div>
+    </MapProvider>
   )
 }
