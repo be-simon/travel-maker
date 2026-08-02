@@ -53,6 +53,17 @@ export function BlockDialog({
   // 다이얼로그가 생성/수정 모드를 오갈 때 폼 필드를 해당 블록(또는 draft)의
   // 값으로 다시 채워야 한다 — 부모가 같은 인스턴스를 재사용하며 open/editingBlock/
   // draft만 갈아끼우므로, 이 동기화는 useEffect 안에서 setState로 처리한다.
+  //
+  // 의존성 배열에 open을 포함하는 이유: editingBlock/draft는 부모(TimelineView)의
+  // blocks prop에서 온 참조라서, "같은 블록을 다시 열기"(취소 후 재클릭 등) 시
+  // openEditDialog가 이전과 동일한 참조를 넘기면 React가 Object.is로 상태 갱신을
+  // 생략해 이 effect가 재실행되지 않는 문제가 있었다. open은 열 때마다 항상
+  // false→true로 바뀌므로(같은 블록을 다시 열어도 마찬가지), open을 의존성에
+  // 추가하면 참조 동일성과 무관하게 매번 재동기화된다. (부모 쪽에서 닫을 때
+  // editingBlock/draft를 null로 되돌리는 방식도 검토했으나, 그러면 open이
+  // false로 바뀌는 것과 같은 렌더에서 tripId가 사라져 `if (!tripId) return null`에
+  // 걸려 Dialog가 즉시 언마운트되고 Base UI의 닫힘 애니메이션이 재생되지 않는
+  // 부작용이 있어 폐기했다.)
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (editingBlock) {
@@ -73,7 +84,7 @@ export function BlockDialog({
       setMemo('')
     }
     setError(null)
-  }, [editingBlock, draft])
+  }, [editingBlock, draft, open])
   /* eslint-enable react-hooks/set-state-in-effect */
 
   const tripId = editingBlock?.trip_id ?? draft?.tripId

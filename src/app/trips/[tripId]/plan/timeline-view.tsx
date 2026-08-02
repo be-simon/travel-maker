@@ -131,19 +131,6 @@ export function TimelineView({
     setDialogOpen(true)
   }
 
-  // 다이얼로그를 닫을 때 editingBlock/draft를 null로 되돌려야 한다 — 그렇지 않으면
-  // "같은 블록을 다시 열기" 시나리오에서 openEditDialog가 이전과 동일한 참조를
-  // setEditingBlock에 넘기게 되어(React가 Object.is로 상태 갱신을 생략) 저장하지
-  // 않고 닫은 이전 편집 내용이 그대로 남아 보이는 버그가 생긴다. null을 항상
-  // 거치게 하면 다음 open에서 참조가 반드시 바뀌어 useEffect가 재실행된다.
-  const handleDialogOpenChange = (open: boolean) => {
-    setDialogOpen(open)
-    if (!open) {
-      setEditingBlock(null)
-      setDraft(null)
-    }
-  }
-
   return (
     <>
       <div className="flex overflow-x-auto rounded-lg border">
@@ -195,7 +182,7 @@ export function TimelineView({
 
       <BlockDialog
         open={dialogOpen}
-        onOpenChange={handleDialogOpenChange}
+        onOpenChange={setDialogOpen}
         draft={draft}
         editingBlock={editingBlock}
         spots={spots}
