@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import { createSpot } from '@/lib/spots/actions'
 import type { SpotCategory, SpotGroup } from '@/types/database'
 import { Button } from '@/components/ui/button'
@@ -50,6 +50,23 @@ export function AddSpotDialog({
     setMemo('')
     setError(null)
   }
+
+  // 다이얼로그를 제출 없이 닫았다가(X 버튼/Escape/배경 클릭) 다시 열면 이전
+  // 입력이 그대로 남아있던 문제 — BlockDialog와 동일하게 open을 의존성으로 하는
+  // effect에서 매번 초기화한다. 이 다이얼로그는 생성 전용이라 동기화할 기존
+  // 데이터가 없으므로 [open]만으로 충분하다.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (open) {
+      setName('')
+      setCategory('sight')
+      setGroupId('new')
+      setNewGroupName('')
+      setMemo('')
+      setError(null)
+    }
+  }, [open])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const submit = () => {
     startTransition(async () => {
