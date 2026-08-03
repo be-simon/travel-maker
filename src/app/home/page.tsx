@@ -16,6 +16,7 @@ export default async function HomePage() {
       <div className="mb-8 flex items-center justify-between">
         <h1 className="text-xl font-semibold">내 여행</h1>
         <div className="flex items-center gap-2">
+          <Button variant="outline" render={<Link href="/places">저장한 장소</Link>} />
           <Button render={<Link href="/trips/new">+ 새 여행 만들기</Link>} />
           <form action="/auth/signout" method="post">
             <Button type="submit" variant="outline">
