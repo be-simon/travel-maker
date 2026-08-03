@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { createSpot } from '@/lib/spots/actions'
-import { useAutocompleteSuggestions } from '@/lib/places/use-autocomplete-suggestions'
+import { PlaceSearchInput } from '@/components/places/place-search-input'
 import type { SpotCategory, SpotGroup } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,7 +33,6 @@ export function AddSpotDialog({
   const [lat, setLat] = useState<number | null>(null)
   const [lng, setLng] = useState<number | null>(null)
   const [address, setAddress] = useState<string | null>(null)
-  const { suggestions, resetSession } = useAutocompleteSuggestions(name)
 
   const groupItems = [
     { value: 'new', label: '+ 새 그룹' },
@@ -51,7 +50,6 @@ export function AddSpotDialog({
     setLat(null)
     setLng(null)
     setAddress(null)
-    resetSession()
   }
 
   // 다이얼로그를 제출 없이 닫았다가(X 버튼/Escape/배경 클릭) 다시 열면 이전
@@ -71,39 +69,9 @@ export function AddSpotDialog({
       setLat(null)
       setLng(null)
       setAddress(null)
-      resetSession()
     }
-    // resetSession is intentionally omitted: it's a new function identity on
-    // every render (not memoized), so including it would re-run this effect
-    // every render instead of only when the dialog opens.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
   /* eslint-enable react-hooks/set-state-in-effect */
-
-  const selectSuggestion = async (suggestion: google.maps.places.AutocompleteSuggestion) => {
-    if (!suggestion.placePrediction) return
-    const place = suggestion.placePrediction.toPlace()
-    try {
-      await place.fetchFields({ fields: ['displayName', 'formattedAddress', 'location'] })
-    } catch (error) {
-      // 리퍼러 제한된(또는 아직 설정 중인) API 키, 쿼터 초과, 네트워크 장애
-      // 등으로 실패할 수 있다 — 여기서 실패하면 폼 필드는 절대 건드리지 않고
-      // (이전 입력이 그대로 유지됨) 사용자가 직접 입력하거나 다시 시도할 수
-      // 있게 한다.
-      console.error('selectSuggestion failed:', error)
-      setError('장소 정보를 불러오지 못했습니다. 다시 시도해 주세요.')
-      return
-    }
-
-    setName(place.displayName ?? '')
-    setAddress(place.formattedAddress ?? null)
-    // place.location is a google.maps.LatLng object (methods, not plain
-    // {lat, lng} properties) — calling .lat()/.lng() is required here.
-    setLat(place.location ? place.location.lat() : null)
-    setLng(place.location ? place.location.lng() : null)
-    setPlaceId(suggestion.placePrediction.placeId)
-    resetSession()
-  }
 
   const submit = () => {
     startTransition(async () => {
@@ -137,30 +105,25 @@ export function AddSpotDialog({
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-sm font-medium">이름</label>
-            <Input
+            <PlaceSearchInput
               value={name}
-              onChange={(e) => {
-                setName(e.target.value)
+              onValueChange={(value) => {
+                setName(value)
                 setPlaceId(null)
                 setLat(null)
                 setLng(null)
                 setAddress(null)
               }}
+              onSelect={(selection) => {
+                setName(selection.name)
+                setAddress(selection.address)
+                setLat(selection.lat)
+                setLng(selection.lng)
+                setPlaceId(selection.placeId)
+              }}
+              onError={setError}
               placeholder="예: 두오모 (검색해서 선택하면 지도에 표시됩니다)"
             />
-            {suggestions.length > 0 && (
-              <ul className="mt-1 max-h-48 overflow-y-auto rounded-md border text-sm">
-                {suggestions.map((suggestion, index) => (
-                  <li
-                    key={index}
-                    className="cursor-pointer px-2 py-1.5 hover:bg-accent"
-                    onClick={() => selectSuggestion(suggestion)}
-                  >
-                    {suggestion.placePrediction?.text.text}
-                  </li>
-                ))}
-              </ul>
-            )}
             {address && <p className="mt-1 text-xs text-muted-foreground">{address}</p>}
           </div>
           <div>
