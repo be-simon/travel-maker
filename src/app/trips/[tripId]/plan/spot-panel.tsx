@@ -4,15 +4,7 @@ import { useState } from 'react'
 import type { Spot, SpotGroup } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { AddSpotDialog } from './add-spot-dialog'
-
-const CATEGORY_LABELS: Record<string, string> = {
-  sight: '관광',
-  restaurant: '식당',
-  cafe: '카페',
-  shopping: '쇼핑',
-  lodging: '숙소',
-  etc: '기타',
-}
+import { CATEGORY_LABELS } from '@/lib/spot-categories'
 
 const STATUS_LABELS: Record<string, string> = {
   candidate: '후보',

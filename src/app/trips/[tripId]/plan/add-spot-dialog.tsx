@@ -9,15 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-
-const CATEGORY_OPTIONS: { value: SpotCategory; label: string }[] = [
-  { value: 'sight', label: '관광' },
-  { value: 'restaurant', label: '식당' },
-  { value: 'cafe', label: '카페' },
-  { value: 'shopping', label: '쇼핑' },
-  { value: 'lodging', label: '숙소' },
-  { value: 'etc', label: '기타' },
-]
+import { CATEGORY_OPTIONS } from '@/lib/spot-categories'
 
 export function AddSpotDialog({
   tripId,
