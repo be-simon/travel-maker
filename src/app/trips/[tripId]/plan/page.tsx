@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation'
 import { getTrip } from '@/lib/trips/queries'
 import { listSpotsByTrip, listSpotGroupsByTrip } from '@/lib/spots/queries'
 import { listBlocksByTrip } from '@/lib/plan-blocks/queries'
+import { listMyBookmarks } from '@/lib/bookmarks/queries'
 import { MapProvider } from '@/components/map/map-provider'
 import { SpotPanel } from './spot-panel'
 import { PlanCanvas } from './plan-canvas'
@@ -14,17 +15,18 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
   const trip = await getTrip(numericTripId)
   if (!trip) notFound()
 
-  const [spots, groups, blocks] = await Promise.all([
+  const [spots, groups, blocks, bookmarks] = await Promise.all([
     listSpotsByTrip(numericTripId),
     listSpotGroupsByTrip(numericTripId),
     listBlocksByTrip(numericTripId),
+    listMyBookmarks(),
   ])
 
   return (
     <MapProvider>
       <div className="flex gap-6">
         <aside className="w-72 shrink-0">
-          <SpotPanel tripId={numericTripId} spots={spots} groups={groups} />
+          <SpotPanel tripId={numericTripId} spots={spots} groups={groups} bookmarks={bookmarks} />
         </aside>
         <section className="flex-1">
           <PlanCanvas

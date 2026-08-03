@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import type { Spot, SpotGroup } from '@/types/database'
+import type { Bookmark, Spot, SpotGroup } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { AddSpotDialog } from './add-spot-dialog'
+import { ImportBookmarksDialog } from './import-bookmarks-dialog'
 import { CATEGORY_LABELS } from '@/lib/spot-categories'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -27,12 +28,15 @@ export function SpotPanel({
   tripId,
   spots,
   groups,
+  bookmarks,
 }: {
   tripId: number
   spots: Spot[]
   groups: SpotGroup[]
+  bookmarks: Bookmark[]
 }) {
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
 
   const grouped = groups
     .map((group) => ({ group, spots: spots.filter((spot) => spot.group_id === group.id) }))
@@ -43,9 +47,14 @@ export function SpotPanel({
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="font-medium">장소</h2>
-        <Button size="sm" onClick={() => setDialogOpen(true)}>
-          + 장소 추가
-        </Button>
+        <div className="flex gap-1">
+          <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+            저장한 장소에서
+          </Button>
+          <Button size="sm" onClick={() => setDialogOpen(true)}>
+            + 장소 추가
+          </Button>
+        </div>
       </div>
 
       {spots.length === 0 && <p className="text-sm text-muted-foreground">아직 담긴 장소가 없습니다.</p>}
@@ -73,6 +82,13 @@ export function SpotPanel({
       )}
 
       <AddSpotDialog tripId={tripId} groups={groups} open={dialogOpen} onOpenChange={setDialogOpen} />
+      <ImportBookmarksDialog
+        tripId={tripId}
+        bookmarks={bookmarks}
+        spots={spots}
+        open={importOpen}
+        onOpenChange={setImportOpen}
+      />
     </div>
   )
 }
