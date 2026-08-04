@@ -30,6 +30,7 @@ function block(overrides: Partial<PlanBlock>): PlanBlock {
     memo: null,
     created_at: '',
     updated_at: '',
+    updated_by: null,
     ...overrides,
   }
 }
@@ -53,6 +54,7 @@ function spot(overrides: Partial<Spot>): Spot {
     status: 'candidate',
     created_at: '',
     updated_at: '',
+    updated_by: null,
     ...overrides,
   }
 }

@@ -17,6 +17,7 @@ function block(overrides: Partial<PlanBlock> & { id: number }): PlanBlock {
     memo: null,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
+    updated_by: null,
     ...overrides,
   }
 }
@@ -39,6 +40,7 @@ function locatedSpot(overrides: Partial<Spot> & { id: number; lat: number; lng: 
     status: 'planned',
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
+    updated_by: null,
     ...overrides,
   }
 }
