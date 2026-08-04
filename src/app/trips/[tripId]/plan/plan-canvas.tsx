@@ -40,7 +40,14 @@ export function PlanCanvas({
         </Button>
       </div>
       {mode === 'timeline' ? (
-        <TimelineView tripId={tripId} startDate={startDate} endDate={endDate} blocks={blocks} spots={spots} />
+        <TimelineView
+          tripId={tripId}
+          startDate={startDate}
+          endDate={endDate}
+          blocks={blocks}
+          spots={spots}
+          groups={groups}
+        />
       ) : (
         <MapView
           tripId={tripId}
