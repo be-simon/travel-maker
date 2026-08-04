@@ -52,8 +52,8 @@ export default async function HomePage() {
       ) : (
         <ul className="space-y-3">
           {trips.map((trip) => (
-            <li key={trip.id}>
-              <Link href={`/trips/${trip.id}`} className="block rounded-lg border p-4 hover:bg-accent">
+            <li key={trip.id} className="rounded-lg border">
+              <Link href={`/trips/${trip.id}`} className="block rounded-t-lg p-4 hover:bg-accent">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{trip.title}</span>
                   {isTripInProgress(trip) && (
@@ -65,10 +65,15 @@ export default async function HomePage() {
                 <span className="text-sm text-muted-foreground">
                   {trip.start_date} – {trip.end_date}
                 </span>
-                {isTripInProgress(trip) && (
-                  <span className="mt-2 block text-sm text-emerald-700">지금 Today 모드 보기 →</span>
-                )}
               </Link>
+              {isTripInProgress(trip) && (
+                <Link
+                  href={`/trips/${trip.id}/today`}
+                  className="block rounded-b-lg border-t px-4 py-3 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+                >
+                  지금 Today 모드 보기 →
+                </Link>
+              )}
             </li>
           ))}
         </ul>

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 export function TripNav({ tripId }: { tripId: number }) {
   const pathname = usePathname()
   const isPlan = pathname?.startsWith(`/trips/${tripId}/plan`)
+  const isToday = pathname?.startsWith(`/trips/${tripId}/today`)
   const isMembers = pathname?.startsWith(`/trips/${tripId}/members`)
 
   return (
@@ -17,12 +18,17 @@ export function TripNav({ tripId }: { tripId: number }) {
         플랜
       </Link>
       <Link
+        href={`/trips/${tripId}/today`}
+        className={isToday ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}
+      >
+        Today
+      </Link>
+      <Link
         href={`/trips/${tripId}/members`}
         className={isMembers ? 'font-medium' : 'text-muted-foreground hover:text-foreground'}
       >
         멤버
       </Link>
-      <span className="text-muted-foreground">Today (M3에서 제공)</span>
     </nav>
   )
 }
