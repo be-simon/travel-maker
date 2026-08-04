@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useTripRealtime } from '@/lib/realtime/trip-realtime'
 
 const TYPE_OPTIONS: { value: BlockType; label: string }[] = [
   { value: 'spot', label: '스팟' },
@@ -46,6 +47,7 @@ export function BlockDialog({
   tripStartDate: string
   tripEndDate: string
 }) {
+  const { markEdited } = useTripRealtime()
   const [title, setTitle] = useState('')
   const [type, setType] = useState<BlockType>('spot')
   const [spotId, setSpotId] = useState<string>('none')
@@ -123,6 +125,7 @@ export function BlockDialog({
       if (result.error) {
         setError(result.error)
       } else {
+        if (editingBlock) markEdited('plan_blocks', editingBlock.id)
         onOpenChange(false)
       }
     })

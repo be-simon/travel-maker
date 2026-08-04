@@ -18,6 +18,7 @@ import {
   timeToMinutes,
   type Recommendation,
 } from '@/lib/today/engine'
+import { useTripRealtime } from '@/lib/realtime/trip-realtime'
 
 const TYPE_LABELS: Record<string, string> = {
   spot: '스팟',
@@ -44,6 +45,7 @@ export function TodayView({ trip, spots, blocks }: { trip: Trip; spots: Spot[]; 
   const [syncedAt, setSyncedAt] = useState(() => new Date())
   const [error, setError] = useState<string | null>(null)
   const [isPending, startTransition] = useTransition()
+  const { lastSyncedAt, markEdited } = useTripRealtime()
 
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 60_000)
@@ -111,8 +113,12 @@ export function TodayView({ trip, spots, blocks }: { trip: Trip; spots: Spot[]; 
     setError(null)
     startTransition(async () => {
       const result = await shiftBlock(block.id, trip.id, deltaMinutes)
-      if (result.error) setError(result.error)
-      else setSyncedAt(new Date())
+      if (result.error) {
+        setError(result.error)
+      } else {
+        markEdited('plan_blocks', block.id)
+        setSyncedAt(new Date())
+      }
     })
   }
 
@@ -132,7 +138,9 @@ export function TodayView({ trip, spots, blocks }: { trip: Trip; spots: Spot[]; 
       <header className="flex items-center justify-between">
         <div>
           <h2 className="font-semibold">{today}</h2>
-          <p className="text-xs text-muted-foreground">마지막 동기화 {formatClock(syncedAt)}</p>
+          <p className="text-xs text-muted-foreground">
+            마지막 동기화 {formatClock(lastSyncedAt ?? syncedAt)}
+          </p>
         </div>
       </header>
 
