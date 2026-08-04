@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useTransition } from 'react'
+import { toast } from 'sonner'
 import { createBlock, updateBlock, deleteBlock } from '@/lib/plan-blocks/actions'
 import type { BlockType, PlanBlock, Spot } from '@/types/database'
 import { Button } from '@/components/ui/button'
@@ -121,28 +122,67 @@ export function BlockDialog({
         tripEndDate,
       }
 
-      const result = editingBlock
-        ? await updateBlock(editingBlock.id, tripId, input)
-        : await createBlock(input)
+      if (editingBlock) {
+        const result = await updateBlock(editingBlock.id, tripId, input)
+        if (result.error) {
+          setError(result.error)
+          return
+        }
+        markEdited('plan_blocks', editingBlock.id)
+        onOpenChange(false)
+        return
+      }
 
+      const result = await createBlock(input)
       if (result.error) {
         setError(result.error)
-      } else {
-        if (editingBlock) markEdited('plan_blocks', editingBlock.id)
-        onOpenChange(false)
+        return
+      }
+      onOpenChange(false)
+      const createdId = result.blockId
+      if (createdId != null) {
+        toast('일정을 추가했어요', {
+          action: {
+            label: '실행 취소',
+            onClick: () => {
+              void deleteBlock(createdId, tripId)
+            },
+          },
+        })
       }
     })
   }
 
   const remove = () => {
     if (!editingBlock) return
+    const deleted = editingBlock
     startTransition(async () => {
-      const result = await deleteBlock(editingBlock.id, editingBlock.trip_id)
+      const result = await deleteBlock(deleted.id, deleted.trip_id)
       if (result.error) {
         setError(result.error)
-      } else {
-        onOpenChange(false)
+        return
       }
+      onOpenChange(false)
+      toast('일정을 삭제했어요', {
+        action: {
+          label: '실행 취소',
+          onClick: () => {
+            // 재생성이므로 id는 새로 발급된다. 스팟 연결·시간·메모는 그대로 복원.
+            void createBlock({
+              tripId: deleted.trip_id,
+              date: deleted.date,
+              startTime: deleted.start_time,
+              endTime: deleted.end_time,
+              type: deleted.type,
+              spotId: deleted.spot_id,
+              title: deleted.title,
+              memo: deleted.memo ?? '',
+              tripStartDate,
+              tripEndDate,
+            })
+          },
+        },
+      })
     })
   }
 
