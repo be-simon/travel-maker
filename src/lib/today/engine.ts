@@ -97,6 +97,7 @@ export function resolveAnchor(
 
 export const MIN_STAY_MINUTES = 30
 export const WALK_SPEED_KM_PER_HOUR = 4.5
+export const DEFAULT_BLOCK_MINUTES = 60
 
 export interface Recommendation {
   spot: Spot
@@ -122,6 +123,64 @@ export function haversineKm(
 // 직선거리 기반 도보 시간 추정 — 실제 경로와 다를 수 있음(PRD F4/F5와 동일한 경량 힌트).
 export function walkMinutes(km: number): number {
   return Math.ceil((km / WALK_SPEED_KM_PER_HOUR) * 60)
+}
+
+// 지금 시각(15분 단위 올림)부터 오늘 블록들 사이에서 durationMinutes짜리 빈 슬롯을
+// 찾는다. 다음 블록까지 남은 틈이 MIN_STAY_MINUTES 이상이면 슬롯을 그 틈 크기로
+// 줄여서라도 끼워 넣고, 그보다 좁으면 그 블록 뒤로 넘어간다. 24:00을 넘기면 잘라
+// 내되 MIN_STAY_MINUTES 미만이 되면 null(오늘은 자리가 없음).
+export function findInsertSlot(
+  todayBlocks: PlanBlock[],
+  nowMinutes: number,
+  durationMinutes: number = DEFAULT_BLOCK_MINUTES
+): { startTime: string; endTime: string } | null {
+  const sorted = [...todayBlocks].sort((a, b) => a.start_time.localeCompare(b.start_time))
+  let start = Math.ceil(nowMinutes / 15) * 15
+  let duration = durationMinutes
+
+  for (const b of sorted) {
+    const bStart = timeToMinutes(b.start_time)
+    const bEnd = timeToMinutes(b.end_time)
+    if (bEnd <= start) continue
+    if (bStart >= start + duration) break
+    if (bStart - start >= MIN_STAY_MINUTES) {
+      duration = bStart - start
+      break
+    }
+    start = Math.max(start, bEnd)
+  }
+
+  if (start + duration > 24 * 60) {
+    if (24 * 60 - start < MIN_STAY_MINUTES) return null
+    duration = 24 * 60 - start
+  }
+
+  return { startTime: minutesToTime(start), endTime: minutesToTime(start + duration) }
+}
+
+export function shiftTimes(
+  start: string,
+  end: string,
+  deltaMinutes: number
+): { start: string; end: string } | null {
+  const s = timeToMinutes(start) + deltaMinutes
+  const e = timeToMinutes(end) + deltaMinutes
+  if (s < 0 || e > 24 * 60) return null
+  return { start: minutesToTime(s), end: minutesToTime(e) }
+}
+
+// 자체 경로 계산 없이 기기의 지도 앱에 위임한다 (PRD F6).
+export function directionsUrl(
+  spot: Pick<Spot, 'name' | 'lat' | 'lng' | 'place_id'>
+): string | null {
+  if (spot.lat != null && spot.lng != null) {
+    const placeParam = spot.place_id ? `&destination_place_id=${spot.place_id}` : ''
+    return `https://www.google.com/maps/dir/?api=1&destination=${spot.lat},${spot.lng}${placeParam}`
+  }
+  if (spot.place_id) {
+    return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(spot.name)}&destination_place_id=${spot.place_id}`
+  }
+  return null
 }
 
 export function recommendSpots(

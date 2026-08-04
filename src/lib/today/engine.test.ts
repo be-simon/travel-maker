@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import type { PlanBlock, Spot } from '@/types/database'
 import {
+  directionsUrl,
   findCurrentBlock,
+  findInsertSlot,
   findNextBlock,
   haversineKm,
   localDateString,
   minutesToTime,
   recommendSpots,
   resolveAnchor,
+  shiftTimes,
   timeToMinutes,
   walkMinutes,
 } from './engine'
@@ -206,5 +209,85 @@ describe('recommendSpots', () => {
   it('treats no next block as always fitting', () => {
     const far = spot({ name: '멀리', lat: 45.1, lng: 9.0 })
     expect(recommendSpots([far], [], anchor, 600)[0].fitsBeforeNext).toBe(true)
+  })
+})
+
+describe('findInsertSlot', () => {
+  it('starts at now rounded up to 15 minutes on an empty day', () => {
+    expect(findInsertSlot([], timeToMinutes('10:07'))).toEqual({
+      startTime: '10:15',
+      endTime: '11:15',
+    })
+  })
+
+  it('skips past a block when the gap before it is under the minimum stay', () => {
+    const blocks = [block({ start_time: '10:30:00', end_time: '12:00:00' })]
+    expect(findInsertSlot(blocks, timeToMinutes('10:07'))).toEqual({
+      startTime: '12:00',
+      endTime: '13:00',
+    })
+  })
+
+  it('shrinks into a gap of at least the minimum stay', () => {
+    const blocks = [block({ start_time: '10:45:00', end_time: '12:00:00' })]
+    expect(findInsertSlot(blocks, timeToMinutes('10:07'))).toEqual({
+      startTime: '10:15',
+      endTime: '10:45',
+    })
+  })
+
+  it('clips the final slot at 24:00 and rejects slivers', () => {
+    expect(findInsertSlot([], timeToMinutes('23:20'))).toEqual({
+      startTime: '23:30',
+      endTime: '24:00',
+    })
+    expect(findInsertSlot([], timeToMinutes('23:50'))).toBeNull()
+  })
+
+  it('walks through consecutive blocks', () => {
+    const blocks = [
+      block({ start_time: '10:00:00', end_time: '11:00:00' }),
+      block({ start_time: '11:00:00', end_time: '12:10:00' }),
+    ]
+    expect(findInsertSlot(blocks, timeToMinutes('10:30'))).toEqual({
+      startTime: '12:10',
+      endTime: '13:10',
+    })
+  })
+})
+
+describe('shiftTimes', () => {
+  it('shifts both times preserving duration', () => {
+    expect(shiftTimes('09:00', '10:30', 15)).toEqual({ start: '09:15', end: '10:45' })
+    expect(shiftTimes('09:00', '10:30', -15)).toEqual({ start: '08:45', end: '10:15' })
+  })
+
+  it('returns null when the shift crosses midnight bounds', () => {
+    expect(shiftTimes('00:10', '01:00', -15)).toBeNull()
+    expect(shiftTimes('23:00', '23:50', 15)).toBeNull()
+  })
+})
+
+describe('directionsUrl', () => {
+  it('builds a Google Maps directions deeplink from coordinates + place_id', () => {
+    expect(
+      directionsUrl({ name: '두오모', lat: 45.4642, lng: 9.1919, place_id: 'abc123' })
+    ).toBe('https://www.google.com/maps/dir/?api=1&destination=45.4642,9.1919&destination_place_id=abc123')
+  })
+
+  it('omits destination_place_id when absent', () => {
+    expect(directionsUrl({ name: '두오모', lat: 45.4642, lng: 9.1919, place_id: null })).toBe(
+      'https://www.google.com/maps/dir/?api=1&destination=45.4642,9.1919'
+    )
+  })
+
+  it('returns null without coordinates or place_id', () => {
+    expect(directionsUrl({ name: 'x', lat: null, lng: null, place_id: null })).toBeNull()
+  })
+
+  it('falls back to name + place_id without coordinates', () => {
+    expect(directionsUrl({ name: '두오모', lat: null, lng: null, place_id: 'abc' })).toBe(
+      'https://www.google.com/maps/dir/?api=1&destination=%EB%91%90%EC%98%A4%EB%AA%A8&destination_place_id=abc'
+    )
   })
 })
