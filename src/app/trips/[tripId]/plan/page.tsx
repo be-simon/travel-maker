@@ -24,8 +24,8 @@ export default async function PlanPage({ params }: { params: Promise<{ tripId: s
 
   return (
     <MapProvider>
-      <div className="flex gap-6">
-        <aside className="w-72 shrink-0">
+      <div className="flex flex-col gap-6 md:flex-row">
+        <aside className="w-full shrink-0 md:w-72">
           <SpotPanel tripId={numericTripId} spots={spots} groups={groups} bookmarks={bookmarks} />
         </aside>
         <section className="flex-1">
