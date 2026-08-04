@@ -367,7 +367,7 @@ export function TimelineView({
               </div>
               <div className="border-b bg-muted/50 p-2 text-center text-sm font-medium">{date}</div>
               <div
-                className="relative cursor-pointer touch-none"
+                className="relative cursor-pointer"
                 style={{
                   height: dayHeight,
                   backgroundImage: `repeating-linear-gradient(to bottom, var(--border) 0, var(--border) 1px, transparent 1px, transparent ${PX_PER_SLOT}px)`,
@@ -414,7 +414,9 @@ export function TimelineView({
                   return (
                     <div
                       key={block.id}
-                      className={`absolute overflow-hidden rounded border p-1 text-xs ${TYPE_COLORS[block.type]} ${
+                      // touch-none을 컬럼이 아닌 블록에 둔다: 빈 영역 스와이프는 페이지 스크롤로
+                      // 남겨두고, 블록에서 시작한 터치만 드래그로 잡는다.
+                      className={`absolute touch-none overflow-hidden rounded border p-1 text-xs ${TYPE_COLORS[block.type]} ${
                         isDragTarget ? 'z-10 opacity-80 shadow-md' : ''
                       }`}
                       style={{
