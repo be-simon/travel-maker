@@ -78,6 +78,10 @@ export function TodayView({ trip, spots, blocks }: { trip: Trip; spots: Spot[]; 
   )
   const openStatuses = useOpenNow(recommendedPlaceIds)
 
+  // realtime 이벤트로 갱신된 시각과 수동 새로고침 시각 중 더 최근 것을 보여준다 —
+  // realtime이 연결된 뒤에도 수동 새로고침이 "마지막 동기화"에 반영되어야 한다.
+  const displaySyncedAt = lastSyncedAt && lastSyncedAt > syncedAt ? lastSyncedAt : syncedAt
+
   const refresh = () => {
     router.refresh()
     setSyncedAt(new Date())
@@ -139,7 +143,7 @@ export function TodayView({ trip, spots, blocks }: { trip: Trip; spots: Spot[]; 
         <div>
           <h2 className="font-semibold">{today}</h2>
           <p className="text-xs text-muted-foreground">
-            마지막 동기화 {formatClock(lastSyncedAt ?? syncedAt)}
+            마지막 동기화 {formatClock(displaySyncedAt)}
           </p>
         </div>
       </header>

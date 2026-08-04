@@ -2,7 +2,10 @@
 --
 -- 1) postgres_changes를 받으려면 테이블이 supabase_realtime publication에 있어야
 --    한다. Realtime은 구독자의 JWT로 RLS를 평가하므로 트립 멤버가 아닌 사용자는
---    이벤트를 받지 못한다 (기존 select 정책 재사용).
+--    INSERT/UPDATE 이벤트를 받지 못한다 (기존 select 정책 재사용). 단, DELETE는
+--    예외다 — Postgres logical replication이 넘기는 old record에는 PK만 남아
+--    있어 Realtime이 RLS로 걸러낼 수 없으므로, 모든 구독자가 다른 트립의 DELETE
+--    이벤트도 받는다. 이때 노출되는 데이터는 {table, id} 뿐이다.
 alter publication supabase_realtime add table public.spots;
 alter publication supabase_realtime add table public.plan_blocks;
 alter publication supabase_realtime add table public.spot_groups;

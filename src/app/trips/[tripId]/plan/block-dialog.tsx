@@ -80,7 +80,10 @@ export function BlockDialog({
       setSpotId(editingBlock.spot_id ? String(editingBlock.spot_id) : 'none')
       setDate(editingBlock.date)
       setStartTime(editingBlock.start_time.slice(0, 5))
-      setEndTime(editingBlock.end_time.slice(0, 5))
+      // input[type=time]은 24:00을 표현하지 못하므로(빈 값으로 렌더되어 저장이
+      // 막힘) 자정 종료 블록은 편집 화면에서 23:59로 표시/저장된다.
+      const endHM = editingBlock.end_time.slice(0, 5)
+      setEndTime(endHM.startsWith('24:') ? '23:59' : endHM)
       setMemo(editingBlock.memo ?? '')
     } else if (draft) {
       setTitle(draft.title ?? '')

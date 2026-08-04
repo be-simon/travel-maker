@@ -120,6 +120,10 @@ export async function shiftBlock(
   tripId: number,
   deltaMinutes: number
 ): Promise<ActionResult> {
+  if (!Number.isInteger(deltaMinutes)) {
+    return { error: '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.' }
+  }
+
   const supabase = await createClient()
   const { data: block, error: fetchError } = await supabase
     .from('plan_blocks')
