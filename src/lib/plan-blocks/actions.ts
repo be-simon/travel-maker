@@ -10,6 +10,11 @@ export interface ActionResult {
   error: string | null
 }
 
+export interface CreateBlockResult {
+  error: string | null
+  blockId: number | null
+}
+
 export interface BlockInput {
   tripId: number
   date: string
@@ -23,29 +28,33 @@ export interface BlockInput {
   tripEndDate: string
 }
 
-export async function createBlock(input: BlockInput): Promise<ActionResult> {
+export async function createBlock(input: BlockInput): Promise<CreateBlockResult> {
   const titleError = validateBlockTitle(input.title)
-  if (titleError) return { error: titleError }
+  if (titleError) return { error: titleError, blockId: null }
   const timeError = validateBlockTimes(input.startTime, input.endTime)
-  if (timeError) return { error: timeError }
+  if (timeError) return { error: timeError, blockId: null }
   const dateError = validateBlockDate(input.date, input.tripStartDate, input.tripEndDate)
-  if (dateError) return { error: dateError }
+  if (dateError) return { error: dateError, blockId: null }
 
   const supabase = await createClient()
-  const { error } = await supabase.from('plan_blocks').insert({
-    trip_id: input.tripId,
-    date: input.date,
-    start_time: input.startTime,
-    end_time: input.endTime,
-    type: input.type,
-    spot_id: input.spotId,
-    title: input.title.trim(),
-    memo: input.memo.trim() || null,
-  })
+  const { data, error } = await supabase
+    .from('plan_blocks')
+    .insert({
+      trip_id: input.tripId,
+      date: input.date,
+      start_time: input.startTime,
+      end_time: input.endTime,
+      type: input.type,
+      spot_id: input.spotId,
+      title: input.title.trim(),
+      memo: input.memo.trim() || null,
+    })
+    .select('id')
+    .single()
 
-  if (error) {
+  if (error || !data) {
     console.error('createBlock failed:', error)
-    return { error: '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.' }
+    return { error: '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.', blockId: null }
   }
 
   // 스팟을 일정에 배치하면 장소 패널에서 "배치됨" 상태로 보이게 한다. 이 업데이트가
@@ -62,7 +71,7 @@ export async function createBlock(input: BlockInput): Promise<ActionResult> {
 
   revalidatePath(`/trips/${input.tripId}/plan`)
   revalidatePath(`/trips/${input.tripId}/today`)
-  return { error: null }
+  return { error: null, blockId: data.id }
 }
 
 export async function updateBlock(
