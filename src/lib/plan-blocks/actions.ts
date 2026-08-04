@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
+import { shiftTimes } from '@/lib/today/engine'
 import { validateBlockDate, validateBlockTimes, validateBlockTitle } from './validation'
 import type { BlockType } from '@/types/database'
 
@@ -60,6 +61,7 @@ export async function createBlock(input: BlockInput): Promise<ActionResult> {
   }
 
   revalidatePath(`/trips/${input.tripId}/plan`)
+  revalidatePath(`/trips/${input.tripId}/today`)
   return { error: null }
 }
 
@@ -95,6 +97,7 @@ export async function updateBlock(
   }
 
   revalidatePath(`/trips/${tripId}/plan`)
+  revalidatePath(`/trips/${tripId}/today`)
   return { error: null }
 }
 
@@ -108,5 +111,41 @@ export async function deleteBlock(blockId: number, tripId: number): Promise<Acti
   }
 
   revalidatePath(`/trips/${tripId}/plan`)
+  revalidatePath(`/trips/${tripId}/today`)
+  return { error: null }
+}
+
+export async function shiftBlock(
+  blockId: number,
+  tripId: number,
+  deltaMinutes: number
+): Promise<ActionResult> {
+  const supabase = await createClient()
+  const { data: block, error: fetchError } = await supabase
+    .from('plan_blocks')
+    .select('start_time, end_time')
+    .eq('id', blockId)
+    .maybeSingle()
+
+  if (fetchError || !block) {
+    console.error('shiftBlock: failed to load block:', fetchError)
+    return { error: '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.' }
+  }
+
+  const shifted = shiftTimes(block.start_time.slice(0, 5), block.end_time.slice(0, 5), deltaMinutes)
+  if (!shifted) return { error: '자정을 넘겨서는 옮길 수 없습니다.' }
+
+  const { error } = await supabase
+    .from('plan_blocks')
+    .update({ start_time: `${shifted.start}:00`, end_time: `${shifted.end}:00` })
+    .eq('id', blockId)
+
+  if (error) {
+    console.error('shiftBlock failed:', error)
+    return { error: '요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.' }
+  }
+
+  revalidatePath(`/trips/${tripId}/plan`)
+  revalidatePath(`/trips/${tripId}/today`)
   return { error: null }
 }
