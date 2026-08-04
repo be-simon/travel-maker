@@ -240,14 +240,26 @@ export function TimelineView({
         action: {
           label: '실행 취소',
           onClick: () => {
+            setPendingTimes((prev) => ({
+              ...prev,
+              [block.id]: { start: toDbTime(prevStart), end: toDbTime(prevEnd) },
+            }))
             startTransition(async () => {
               const undo = await updateBlock(
                 block.id,
                 tripId,
                 blockToInput(block, prevStart, prevEnd, startDate, endDate)
               )
-              if (undo.error) toast.error(undo.error)
-              else markEdited('plan_blocks', block.id)
+              if (undo.error) {
+                toast.error(undo.error)
+                setPendingTimes((prev) => {
+                  const next = { ...prev }
+                  delete next[block.id]
+                  return next
+                })
+                return
+              }
+              markEdited('plan_blocks', block.id)
             })
           },
         },
