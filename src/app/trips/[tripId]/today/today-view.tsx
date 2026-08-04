@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState, useTransition } from 'react'
+import { useEffect, useMemo, useState, useTransition } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { PlanBlock, Spot, Trip } from '@/types/database'
 import { Button } from '@/components/ui/button'
 import { createBlock, shiftBlock } from '@/lib/plan-blocks/actions'
+import { useOpenNow } from '@/lib/places/use-open-now'
 import {
   directionsUrl,
   findCurrentBlock,
@@ -65,6 +66,15 @@ export function TodayView({ trip, spots, blocks }: { trip: Trip; spots: Spot[]; 
     : []
   const remainingToNext = nextBlock ? timeToMinutes(nextBlock.start_time) - nowMinutes : null
   const spotById = new Map(spots.map((spot) => [spot.id, spot]))
+
+  // recommendations는 렌더마다 새로 계산되므로 id 목록 문자열로 안정화한다.
+  const recommendedPlaceIdsKey = recommendations.map((rec) => rec.spot.place_id).join(',')
+  const recommendedPlaceIds = useMemo(
+    () => recommendations.map((rec) => rec.spot.place_id).filter((id): id is string => id != null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [recommendedPlaceIdsKey]
+  )
+  const openStatuses = useOpenNow(recommendedPlaceIds)
 
   const refresh = () => {
     router.refresh()
@@ -237,6 +247,16 @@ export function TodayView({ trip, spots, blocks }: { trip: Trip; spots: Spot[]; 
                   {!rec.fitsBeforeNext && (
                     <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-800">
                       다음 일정 전엔 빠듯해요
+                    </span>
+                  )}
+                  {rec.spot.place_id && openStatuses[rec.spot.place_id] === true && (
+                    <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] text-emerald-800">
+                      영업 중
+                    </span>
+                  )}
+                  {rec.spot.place_id && openStatuses[rec.spot.place_id] === false && (
+                    <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] text-gray-600">
+                      영업 종료
                     </span>
                   )}
                 </div>
