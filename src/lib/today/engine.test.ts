@@ -3,10 +3,13 @@ import type { PlanBlock, Spot } from '@/types/database'
 import {
   findCurrentBlock,
   findNextBlock,
+  haversineKm,
   localDateString,
   minutesToTime,
+  recommendSpots,
   resolveAnchor,
   timeToMinutes,
+  walkMinutes,
 } from './engine'
 
 let nextId = 1
@@ -148,5 +151,60 @@ describe('resolveAnchor', () => {
 
   it('returns null when nothing has coordinates', () => {
     expect(resolveAnchor([], [spot({ lat: null, lng: null })], 600)).toBeNull()
+  })
+})
+
+describe('haversineKm / walkMinutes', () => {
+  it('computes straight-line distance (Milan Duomo → Sforza Castle ≈ 1.1km)', () => {
+    const km = haversineKm({ lat: 45.4642, lng: 9.1919 }, { lat: 45.4705, lng: 9.1794 })
+    expect(km).toBeGreaterThan(0.9)
+    expect(km).toBeLessThan(1.4)
+  })
+
+  it('is zero for identical points', () => {
+    expect(haversineKm({ lat: 45, lng: 9 }, { lat: 45, lng: 9 })).toBe(0)
+  })
+
+  it('estimates walking minutes at 4.5km/h, rounded up', () => {
+    expect(walkMinutes(0)).toBe(0)
+    expect(walkMinutes(1.5)).toBe(20)
+    expect(walkMinutes(0.1)).toBe(2)
+  })
+})
+
+describe('recommendSpots', () => {
+  const anchor = { lat: 45.0, lng: 9.0, label: '기준', source: 'current' as const }
+
+  it('filters visited, coordinate-less, and already-scheduled-today spots', () => {
+    const visited = spot({ name: '방문함', status: 'visited', lat: 45.0, lng: 9.0 })
+    const noCoords = spot({ name: '좌표 없음', lat: null, lng: null })
+    const scheduled = spot({ name: '오늘 배치됨', lat: 45.0, lng: 9.0 })
+    const ok = spot({ name: '추천 대상', lat: 45.001, lng: 9.0 })
+    const blocks = [block({ start_time: '09:00:00', end_time: '10:00:00', spot_id: scheduled.id })]
+    const recs = recommendSpots([visited, noCoords, scheduled, ok], blocks, anchor, 600)
+    expect(recs.map((r) => r.spot.name)).toEqual(['추천 대상'])
+  })
+
+  it('sorts by distance ascending', () => {
+    const far = spot({ name: '멀리', lat: 45.1, lng: 9.0 })
+    const near = spot({ name: '가까이', lat: 45.001, lng: 9.0 })
+    const recs = recommendSpots([far, near], [], anchor, 600)
+    expect(recs.map((r) => r.spot.name)).toEqual(['가까이', '멀리'])
+    expect(recs[0].distanceKm).toBeLessThan(recs[1].distanceKm)
+  })
+
+  it('marks fitsBeforeNext=false when walk + minimum stay exceeds the gap to the next block', () => {
+    // 앵커에서 ~11km → 도보 ~148분. 다음 블록까지 60분이면 못 간다.
+    const far = spot({ name: '멀리', lat: 45.1, lng: 9.0 })
+    const near = spot({ name: '가까이', lat: 45.001, lng: 9.0 })
+    const next = block({ start_time: '11:00:00', end_time: '12:00:00' })
+    const recs = recommendSpots([far, near], [next], anchor, timeToMinutes('10:00'))
+    expect(recs.find((r) => r.spot.name === '가까이')?.fitsBeforeNext).toBe(true)
+    expect(recs.find((r) => r.spot.name === '멀리')?.fitsBeforeNext).toBe(false)
+  })
+
+  it('treats no next block as always fitting', () => {
+    const far = spot({ name: '멀리', lat: 45.1, lng: 9.0 })
+    expect(recommendSpots([far], [], anchor, 600)[0].fitsBeforeNext).toBe(true)
   })
 })

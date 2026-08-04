@@ -94,3 +94,61 @@ export function resolveAnchor(
 
   return null
 }
+
+export const MIN_STAY_MINUTES = 30
+export const WALK_SPEED_KM_PER_HOUR = 4.5
+
+export interface Recommendation {
+  spot: Spot
+  distanceKm: number
+  walkMin: number
+  fitsBeforeNext: boolean
+}
+
+export function haversineKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number }
+): number {
+  const R = 6371
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const dLat = toRad(b.lat - a.lat)
+  const dLng = toRad(b.lng - a.lng)
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2
+  return 2 * R * Math.asin(Math.sqrt(s))
+}
+
+// 직선거리 기반 도보 시간 추정 — 실제 경로와 다를 수 있음(PRD F4/F5와 동일한 경량 힌트).
+export function walkMinutes(km: number): number {
+  return Math.ceil((km / WALK_SPEED_KM_PER_HOUR) * 60)
+}
+
+export function recommendSpots(
+  spots: Spot[],
+  todayBlocks: PlanBlock[],
+  anchor: Anchor,
+  nowMinutes: number
+): Recommendation[] {
+  const scheduledSpotIds = new Set(
+    todayBlocks.map((b) => b.spot_id).filter((id): id is number => id != null)
+  )
+  const next = findNextBlock(todayBlocks, nowMinutes)
+  const remaining = next ? timeToMinutes(next.start_time) - nowMinutes : null
+
+  return spots
+    .filter(
+      (s) =>
+        s.status !== 'visited' &&
+        s.lat != null &&
+        s.lng != null &&
+        !scheduledSpotIds.has(s.id)
+    )
+    .map((s) => {
+      const distanceKm = haversineKm(anchor, { lat: s.lat!, lng: s.lng! })
+      const walkMin = walkMinutes(distanceKm)
+      const fitsBeforeNext = remaining == null ? true : walkMin + MIN_STAY_MINUTES <= remaining
+      return { spot: s, distanceKm, walkMin, fitsBeforeNext }
+    })
+    .sort((a, b) => a.distanceKm - b.distanceKm)
+}
