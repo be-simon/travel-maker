@@ -6,8 +6,9 @@ export const MAX_REDIRECTS = 5
 
 const SHORTENER_HOSTS = new Set(['maps.app.goo.gl', 'goo.gl', 'www.goo.gl', 'g.co'])
 
-// google.com / google.de / google.co.kr / google.com.br + 서브도메인(www, maps, consent …)
-const GOOGLE_HOST_RE = /^([a-z0-9-]+\.)*google\.(com|[a-z]{2}|co\.[a-z]{2}|com\.[a-z]{2})$/
+// google.com과 그 서브도메인만 허용. 구글이 국가별 도메인을 google.com으로 통합했으므로
+// SSRF 표면을 최소화하려 google.com 계열만 인정한다.
+const GOOGLE_HOST_RE = /^([a-z0-9-]+\.)*google\.com$/
 
 export function isAllowedGmapHost(hostname: string): boolean {
   const host = hostname.toLowerCase()

@@ -10,9 +10,6 @@ describe('isAllowedGmapHost', () => {
       'google.com',
       'www.google.com',
       'maps.google.com',
-      'google.de',
-      'google.co.kr',
-      'www.google.co.uk',
       'consent.google.com',
     ]) {
       expect(isAllowedGmapHost(host), host).toBe(true)
@@ -28,6 +25,13 @@ describe('isAllowedGmapHost', () => {
       'goo.gl.evil.com',
       'localhost',
       '169.254.169.254',
+      // 구글 ccTLD는 폐기되어 google.com으로 리다이렉트되므로 직접 허용하지 않는다.
+      'google.de',
+      'google.co.kr',
+      'www.google.co.uk',
+      // 임의의 2-letter TLD를 허용하면 SSRF 표면이 커진다.
+      'google.zz',
+      'google.co.zz',
     ]) {
       expect(isAllowedGmapHost(host), host).toBe(false)
     }
