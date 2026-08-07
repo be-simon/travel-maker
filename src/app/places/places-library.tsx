@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import type { Bookmark } from '@/types/database'
+import type { Bookmark, Trip } from '@/types/database'
 import { deleteBookmark } from '@/lib/bookmarks/actions'
 import { filterBookmarks } from '@/lib/bookmarks/filter'
 import { CATEGORY_LABELS, CATEGORY_OPTIONS } from '@/lib/spot-categories'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { AddToTripDialog } from './add-to-trip-dialog'
 import { BookmarkDialog } from './bookmark-dialog'
 import { LinkImportDialog } from './link-import-dialog'
 
@@ -15,6 +16,7 @@ type DialogState =
   | { mode: 'add' }
   | { mode: 'link' }
   | { mode: 'edit'; bookmark: Bookmark }
+  | { mode: 'addToTrip'; bookmark: Bookmark }
 
 function uniqueValues(values: (string | null)[]): string[] {
   return [...new Set(values.filter((value): value is string => value !== null))].sort()
@@ -51,7 +53,7 @@ function FilterChips({
   )
 }
 
-export function PlacesLibrary({ bookmarks }: { bookmarks: Bookmark[] }) {
+export function PlacesLibrary({ bookmarks, trips }: { bookmarks: Bookmark[]; trips: Trip[] }) {
   const [query, setQuery] = useState('')
   const [country, setCountry] = useState<string | null>(null)
   const [city, setCity] = useState<string | null>(null)
@@ -154,6 +156,13 @@ export function PlacesLibrary({ bookmarks }: { bookmarks: Bookmark[] }) {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={() => setDialog({ mode: 'addToTrip', bookmark })}
+                  >
+                    여행에 담기
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setDialog({ mode: 'edit', bookmark })}
                   >
                     수정
@@ -182,6 +191,14 @@ export function PlacesLibrary({ bookmarks }: { bookmarks: Bookmark[] }) {
           if (!open) setDialog({ mode: 'closed' })
         }}
         existing={bookmarks}
+      />
+      <AddToTripDialog
+        open={dialog.mode === 'addToTrip'}
+        onOpenChange={(open) => {
+          if (!open) setDialog({ mode: 'closed' })
+        }}
+        bookmark={dialog.mode === 'addToTrip' ? dialog.bookmark : null}
+        trips={trips}
       />
     </div>
   )
