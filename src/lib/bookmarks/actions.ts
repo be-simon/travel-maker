@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import { createClient } from '@/lib/supabase/server'
 import { validateBookmarkName } from './validation'
-import type { SpotCategory } from '@/types/database'
+import type { BookmarkSource, SpotCategory } from '@/types/database'
 
 export interface ActionResult {
   error: string | null
@@ -21,6 +21,7 @@ export async function createBookmark(input: {
   lng: number | null
   address: string | null
   memo: string
+  source?: BookmarkSource
 }): Promise<ActionResult> {
   const nameError = validateBookmarkName(input.name)
   if (nameError) return { error: nameError }
@@ -40,7 +41,7 @@ export async function createBookmark(input: {
     lng: input.lng,
     address: input.address,
     memo: input.memo.trim() || null,
-    source: 'manual',
+    source: input.source ?? 'manual',
   })
 
   if (error) {
