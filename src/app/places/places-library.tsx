@@ -8,8 +8,13 @@ import { CATEGORY_LABELS, CATEGORY_OPTIONS } from '@/lib/spot-categories'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { BookmarkDialog } from './bookmark-dialog'
+import { LinkImportDialog } from './link-import-dialog'
 
-type DialogState = { mode: 'closed' } | { mode: 'add' } | { mode: 'edit'; bookmark: Bookmark }
+type DialogState =
+  | { mode: 'closed' }
+  | { mode: 'add' }
+  | { mode: 'link' }
+  | { mode: 'edit'; bookmark: Bookmark }
 
 function uniqueValues(values: (string | null)[]): string[] {
   return [...new Set(values.filter((value): value is string => value !== null))].sort()
@@ -84,6 +89,9 @@ export function PlacesLibrary({ bookmarks }: { bookmarks: Bookmark[] }) {
         />
         <Button className="shrink-0" onClick={() => setDialog({ mode: 'add' })}>
           + 장소 저장
+        </Button>
+        <Button variant="outline" className="shrink-0" onClick={() => setDialog({ mode: 'link' })}>
+          링크로 저장
         </Button>
       </div>
 
@@ -161,11 +169,18 @@ export function PlacesLibrary({ bookmarks }: { bookmarks: Bookmark[] }) {
       )}
 
       <BookmarkDialog
-        open={dialog.mode !== 'closed'}
+        open={dialog.mode === 'add' || dialog.mode === 'edit'}
         onOpenChange={(open) => {
           if (!open) setDialog({ mode: 'closed' })
         }}
         editing={dialog.mode === 'edit' ? dialog.bookmark : null}
+        existing={bookmarks}
+      />
+      <LinkImportDialog
+        open={dialog.mode === 'link'}
+        onOpenChange={(open) => {
+          if (!open) setDialog({ mode: 'closed' })
+        }}
         existing={bookmarks}
       />
     </div>
