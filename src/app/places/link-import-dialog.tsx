@@ -219,6 +219,11 @@ export function LinkImportDialog({
                 {preview.address && (
                   <div className="mt-0.5 text-xs text-muted-foreground">{preview.address}</div>
                 )}
+                {preview.lat != null && preview.lng != null && (
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    좌표 {preview.lat.toFixed(5)}, {preview.lng.toFixed(5)}
+                  </div>
+                )}
                 {preview.openingHours.length > 0 && (
                   <details className="mt-2">
                     <summary className="cursor-pointer text-xs text-muted-foreground">

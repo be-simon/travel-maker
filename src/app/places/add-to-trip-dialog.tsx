@@ -78,7 +78,7 @@ export function AddToTripDialog({
                 >
                   <span className="truncate">{trip.title}</span>
                   <span className="text-xs text-muted-foreground">
-                    {pendingTripId === trip.id ? '담는 중…' : `${trip.start_date} –`}
+                    {pendingTripId === trip.id ? '담는 중…' : `${trip.start_date} – ${trip.end_date}`}
                   </span>
                 </Button>
               </li>
