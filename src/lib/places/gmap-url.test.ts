@@ -79,4 +79,9 @@ describe('parseGmapUrl', () => {
     expect(parseGmapUrl('https://www.google.com/maps')).toBeNull()
     expect(parseGmapUrl('not a url')).toBeNull()
   })
+
+  it('does not double-decode q param names', () => {
+    expect(parseGmapUrl('https://maps.google.com/?q=100%25%20Coffee')?.name).toBe('100% Coffee')
+    expect(parseGmapUrl('https://maps.google.com/?q=Fish%2BChips')?.name).toBe('Fish+Chips')
+  })
 })

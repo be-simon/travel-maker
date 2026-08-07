@@ -81,7 +81,7 @@ export function parseGmapUrl(rawUrl: string): ParsedGmapPlace | null {
         lng = parseFloat(coordMatch[2])
       }
     } else if (!name) {
-      name = decodeName(q)
+      name = q.trim() || null
     }
   }
 
