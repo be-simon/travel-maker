@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMapsLibrary } from '@vis.gl/react-google-maps'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -57,9 +57,13 @@ export function LinkImportDialog({
   const [memo, setMemo] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  // 다이얼로그가 닫혔다 다시 열리면 진행 중이던 응답은 무시한다 — 이전 링크의
+  // 미리보기/저장이 새 세션을 덮어쓰지 않게 open/close 전환마다 세션을 증가시킨다.
+  const sessionRef = useRef(0)
 
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
+    sessionRef.current += 1
     if (open) {
       setUrl('')
       setStep({ kind: 'input' })
@@ -122,6 +126,7 @@ export function LinkImportDialog({
   }
 
   const resolve = async () => {
+    const session = sessionRef.current
     setError(null)
     setStep({ kind: 'loading' })
     try {
@@ -129,6 +134,7 @@ export function LinkImportDialog({
       const { data, error: fnError } = await supabase.functions.invoke('resolve-gmap-link', {
         body: { url },
       })
+      if (sessionRef.current !== session) return
       if (fnError) {
         throw new Error('링크를 해석하지 못했습니다. Google 지도 공유 링크인지 확인해 주세요.')
       }
@@ -137,6 +143,7 @@ export function LinkImportDialog({
         throw new Error('링크에서 장소 정보를 찾지 못했습니다. 직접 입력으로 저장해 주세요.')
       }
       const found = await lookupPlace(parsed)
+      if (sessionRef.current !== session) return
       if (!found) {
         throw new Error('장소를 특정하지 못했습니다. 직접 입력으로 저장해 주세요.')
       }
@@ -144,6 +151,7 @@ export function LinkImportDialog({
       setCity(found.city ?? '')
       setStep({ kind: 'preview', preview: found })
     } catch (caught) {
+      if (sessionRef.current !== session) return
       setError(caught instanceof Error ? caught.message : '링크를 해석하지 못했습니다.')
       setStep({ kind: 'input' })
     }
@@ -151,6 +159,7 @@ export function LinkImportDialog({
 
   const save = () => {
     if (!preview) return
+    const session = sessionRef.current
     setSaving(true)
     setError(null)
     void (async () => {
@@ -166,6 +175,7 @@ export function LinkImportDialog({
         memo,
         source: 'gmap_link',
       })
+      if (sessionRef.current !== session) return
       setSaving(false)
       if (result.error) {
         setError(result.error)
